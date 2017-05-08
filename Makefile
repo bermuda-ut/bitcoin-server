@@ -8,7 +8,7 @@
 #   LastChange: 2017-05-08 18:55:56
 #=============================================================================
 CC = gcc
-CFLAGS = -Wall -Wextra -std=gnu99
+CFLAGS = -Wall -Wextra -std=gnu99 -pthread
 
 LIB = -lm
 HDR = driver.h
