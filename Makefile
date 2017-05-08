@@ -11,7 +11,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -std=gnu99
 
 LIB = -lm
-HDR = 
+HDR = driver.h
 SRC = driver.c
 OBJ = $(SRC:.c=.o)
 
