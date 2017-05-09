@@ -1,3 +1,13 @@
+/*=============================================================================
+#     FileName: threads.c
+#         Desc:  
+#       Author: Max Lee
+#        Email: hoso1312@gmail.com
+#     HomePage: mallocsizeof.me
+#      Version: 0.0.1
+#   LastChange: 2017-05-09 14:33:32
+#      History:
+=============================================================================*/
 #include "threads.h"
 
 extern char *init_avail_flags(int count) {
@@ -7,8 +17,7 @@ extern char *init_avail_flags(int count) {
 }
 
 extern int get_avail_thread(char* flags, int count) {
-    int i = 0;
-    while(i < count) {
+    for(int i = 0; i < count; i++) {
         if(flags[i] == 0) {
             flags[i] = 1;
             return i;

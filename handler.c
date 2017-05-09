@@ -1,4 +1,12 @@
-
+/*=============================================================================
+#     FileName: handler.c
+#         Desc:  
+#       Author: Max Lee
+#        Email: hoso1312@gmail.com
+#     HomePage: mallocsizeof.me
+#      Version: 0.0.1
+#   LastChange: 2017-05-09 14:33:22
+=============================================================================*/
 #include "handler.h"
 #include "threads.h"
 #include "driver.h"
@@ -14,6 +22,8 @@ void *client_handler(void *thread_arg) {
     int n;
     char *to_send;
 
+    fprintf(stderr, "[THREAD] Thread Created for Client %d\n", i);
+
     while(1) {
         bzero(buffer, BUFFER_LEN);
 
@@ -22,11 +32,12 @@ void *client_handler(void *thread_arg) {
             break;
 
         } else if(n == 0) {
-            fprintf(stderr, "Client %d disconnected\n", i);
+            // end of file
+            fprintf(stderr, "[THREAD] Client %d disconnected\n", i);
             break;
         }
 
-        fprintf(stderr, "Client %d sent: ", i);
+        fprintf(stderr, "[THREAD] Client %d sent: ", i);
         for(int i = 0; i < BUFFER_LEN; i++) {
             fprintf(stderr, "%c", buffer[i]);
         }
@@ -48,5 +59,9 @@ void *client_handler(void *thread_arg) {
     close(*newsockfd);
 
     return 0;
+}
+
+void parse_client_command(char *str) {
+
 }
 
