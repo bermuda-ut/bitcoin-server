@@ -8,11 +8,11 @@
 #   LastChange: 2017-05-08 18:55:56
 #=============================================================================
 CC = gcc
-CFLAGS = -Wall -Wextra -std=gnu99 -pthread
+CFLAGS = -Wall -Wextra -std=gnu99
 
-LIB = -lm
-HDR = driver.h
-SRC = driver.c
+LIB = -lm -pthread
+HDR = driver.h netsock.h handler.h threads.h
+SRC = driver.c netsock.c handler.c threads.c
 OBJ = $(SRC:.c=.o)
 
 EXE = server
