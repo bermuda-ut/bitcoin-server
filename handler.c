@@ -20,7 +20,8 @@ void *client_handler(void *thread_arg) {
         i = args->i;
     
     int n;
-    char *to_send;
+    char *to_send,
+        *recieved_string;
 
     fprintf(stderr, "[THREAD] Thread Created for Client %d\n", i);
 
@@ -37,9 +38,9 @@ void *client_handler(void *thread_arg) {
             break;
         }
 
-        fprintf(stderr, "[THREAD] Client %d sent: ", i);
+        fprintf(stderr, "[THREAD] Client %d sent: %s\nBreakdown: ", i, buffer);
         for(int i = 0; i < BUFFER_LEN; i++) {
-            fprintf(stderr, "%c", buffer[i]);
+            fprintf(stderr, "%d ", buffer[i]);
         }
         fprintf(stderr, "\n");
 
