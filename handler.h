@@ -12,6 +12,13 @@
 
 extern void *client_handler(void *thread_arg);
 
-void join_client_command(char **dest, char* src, int *destlen);
+
 void ping_handler(int *newsockfd, char *command_str);
+void pong_handler(int *newsockfd, char *command_str);
+void okay_handler(int *newsockfd, char *command_str);
+void erro_handler(int *newsockfd, char *command_str);
+
+void send_message(int *newsockfd, char* to_send);
+
+void join_client_command(char **dest, char* src, int *destlen);
 char* get_command(char** full_cmd_str);

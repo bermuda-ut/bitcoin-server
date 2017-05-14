@@ -47,20 +47,27 @@ void *client_handler(void *thread_arg) {
         join_client_command(recieved_string, buffer, recv_str_len);
 
         fprintf(stderr, "[THREAD] Client %d sent: %s", i, buffer);
-        fprintf(stderr, "[THREAD] Client %d cmds: %s", i, *recieved_string);
+        fprintf(stderr, "[THREAD] Client %d cmds: %s\n", i, *recieved_string);
 
+        /*
         fprintf(stderr, "         Breakdown: ");
         for(int i = 0; i < (int)strlen(*recieved_string); i++) {
             fprintf(stderr, "%d ", (*recieved_string)[i]);
         }
         fprintf(stderr, "\n");
+        */
 
         while((cmd = get_command(recieved_string)) != NULL) {
             fprintf(stderr, "Was able to get a command: %s\n", cmd);
-            break;
 
-            if(strcmp("PING\r\n", cmd) == 0) {
+            if(strcmp("PING", cmd) == 0) {
                 ping_handler(newsockfd, cmd);
+            } else if(strcmp("PONG", cmd) == 0) {
+                pong_handler(newsockfd, cmd);
+            } else if(strcmp("OKAY", cmd) == 0) {
+                okay_handler(newsockfd, cmd);
+            } else if(strcmp("ERRO", cmd) == 0) {
+                erro_handler(newsockfd, cmd);
             } else {
                 //to_send = "ERRO\r\n";
             }
@@ -73,13 +80,37 @@ void *client_handler(void *thread_arg) {
     return 0;
 }
 
-void ping_handler(int *newsockfd, char *command_str) {
-    int n;
-    char *to_send = "PING";
+void erro_handler(int *newsockfd, char *command_str) {
+    char to_send[47] = "ERRO\tThis is strictly used to send YOU errors\r\n";
+    fprintf(stderr, "[THREAD] Handling ERRO\n");
+    send_message(newsockfd, to_send);
+    fprintf(stderr, "[THREAD] Handling ERRO Success\n");
 
-    if ((n = write(*newsockfd, to_send, strlen(to_send))) <= 0) {
-        perror("ERROR writing to socket");
-    }
+    free(command_str);
+}
+
+void okay_handler(int *newsockfd, char *command_str) {
+    char to_send[47] = "ERRO\tDude it's not okay to send OKAY okay?\r\n";
+    fprintf(stderr, "[THREAD] Handling OKAY\n");
+    send_message(newsockfd, to_send);
+    fprintf(stderr, "[THREAD] Handling OKAY Success\n");
+
+    free(command_str);
+}
+
+void pong_handler(int *newsockfd, char *command_str) {
+    char to_send[47] = "ERRO\tPONG is strictly reserved for server\r\n";
+    fprintf(stderr, "[THREAD] Handling PONG\n");
+    send_message(newsockfd, to_send);
+    fprintf(stderr, "[THREAD] Handling PONG Success\n");
+
+    free(command_str);
+}
+
+void ping_handler(int *newsockfd, char *command_str) {
+    fprintf(stderr, "[THREAD] Handling PING\n");
+    send_message(newsockfd, "PONG\r\n");
+    fprintf(stderr, "[THREAD] Handling PING Success\n");
 
     free(command_str);
 }
@@ -123,4 +154,12 @@ void join_client_command(char **str, char *command_str, int *str_len) {
 
     strcat(*str, command_str);
 }
+
+void send_message(int *newsockfd, char* to_send) {
+    int n;
+    if ((n = write(*newsockfd, to_send, strlen(to_send))) <= 0) {
+        perror("ERROR writing to socket");
+    }
+}
+
 
