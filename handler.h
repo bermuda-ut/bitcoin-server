@@ -8,5 +8,10 @@
 #   LastChange: 2017-05-09 14:33:27
 #      History:
 =============================================================================*/
+#define INIT_CMD_STR_SIZE 256
+
 extern void *client_handler(void *thread_arg);
-void parse_client_command(char *str);
+
+void join_client_command(char **dest, char* src, int *destlen);
+void ping_handler(int *newsockfd, char *command_str);
+char* get_command(char** full_cmd_str);
