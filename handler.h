@@ -13,7 +13,7 @@
 
 #define WORKER_COUNT 10
 
-#define INIT_CMD_STR_SIZE 256
+#define INIT_CMD_STR_SIZE 128
 #include "uint256.h"
 #include <arpa/inet.h>
 
@@ -105,8 +105,10 @@ static void join_client_command(char **str, char *command_str, int *str_len) {
     int currlen = strlen(*str);
 
     if(currlen > *str_len - 3) {
+        int tmp = str_len;
         *str_len = *str_len * 2;
         str = realloc(str, sizeof(char) * *str_len);
+        bzero(str+tmp, str_len - tmp);
     }
 
     strcat(*str, command_str);

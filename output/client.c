@@ -78,7 +78,7 @@ int main(int argc, char**argv)
 
 	bzero(buffer,256);
 
-    //strcpy(buffer, "PING\r\n");
+    strcpy(buffer, "PING\r\nPING\r\n");
 	
 	//strcpy(buffer, "SOLN 1fffffff 0000000019d6689c085ae165831e934ff763ae46a218a6c172b3f1b60a8ce26f 1000000023212147\r\n");
 
