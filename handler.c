@@ -198,44 +198,20 @@ BYTE *get_x(BYTE* seed, uint64_t solution) {
     BYTE *x = malloc(sizeof(BYTE) * 40);
     uint64_t tmp = ntohl(solution);
 
+    memcpy(x, seed, 32);
     if(tmp != solution) {
         // little endian
-
-        BYTE *temp = malloc(sizeof(BYTE) * 32);
-        memcpy(temp, seed, 32);
-        for(int i = 0; i < 32; i++) {
-            x[8+i] = temp[31-i];
-        }
-
         BYTE *temp2 = malloc(sizeof(BYTE) * 8);
         memcpy(temp2, &solution, 8);
         for(int i = 0; i < 8; i++) {
-            x[i] = temp2[i];
+            x[32+i] = temp2[7-i];
         }
-
-        free(temp);
         free(temp2);
-        /*
-        */
 
     } else {
-        memcpy(x, seed, 32);
         memcpy(x+32, &solution, 8);
     }
     
-    /*
-    */
-    /*
-    BYTE *x = malloc(sizeof(BYTE) * 32);
-    bzero(temp, 32);
-
-    memcpy(temp+24, &solution, 8);
-    fprintf(stderr, "[THREAD] temp: ");
-    byte_print(stderr, temp, 32);
-
-    *x = *seed | *temp;
-    */
-
     fprintf(stderr, "[THREAD] x: ");
     byte_print(stderr, x, 40);
 
