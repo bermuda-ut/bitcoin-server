@@ -5,28 +5,40 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-14 20:22:23
+#   LastChange: 2017-05-15 19:16:55
 #      History:
 =============================================================================*/
 #ifndef HANDLER
 #define HANDLER
 
+#define WORKER_COUNT 10
+
 #define INIT_CMD_STR_SIZE 256
 #include "uint256.h"
 #include <arpa/inet.h>
 
-extern void *client_handler(void *thread_arg);
+typedef struct {
+    int* newsockfd;
+    char* command_str;
+    int client_id;
+} worker_arg_t;
 
-void ping_handler(int *newsockfd, char *command_str);
-void pong_handler(int *newsockfd, char *command_str);
-void okay_handler(int *newsockfd, char *command_str);
-void erro_handler(int *newsockfd, char *command_str);
-void soln_handler(int *newsockfd, char *command_str);
-void unkn_handler(int *newsockfd, char *command_str);
+extern void *client_handler(void *);
 
-int is_valid_soln(BYTE *target, BYTE *seed, uint64_t solution);
+void *ping_handler(void *);
+void *pong_handler(void *);
+void *okay_handler(void *);
+void *erro_handler(void *);
+void *soln_handler(void *);
+void *unkn_handler(void *);
 
-void send_message(int *newsockfd, char* to_send);
+int is_valid_soln(BYTE *, BYTE *, uint64_t);
+
+void send_message(int *, char*);
+
+static void free_worker_arg(worker_arg_t *arg) {
+    free(arg);
+}
 
 // hex string to byte
 static BYTE *hstob(char *hex_string, size_t size) {

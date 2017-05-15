@@ -5,14 +5,14 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-09 14:33:32
+#   LastChange: 2017-05-15 19:16:52
 #      History:
 =============================================================================*/
 #include "threads.h"
 
 extern char *init_avail_flags(int count) {
     char* flags = malloc(sizeof(char) * count);
-    bzero(flags, CLIENT_COUNT);
+    bzero(flags, count);
     return flags;
 }
 

@@ -12,7 +12,7 @@
 #include "driver.h"
 #include "crypto/sha256.h"
 
-static BYTE BYTE_TWO[] = {
+BYTE BYTE_TWO[] = {
     0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00,
@@ -41,6 +41,9 @@ void *client_handler(void *thread_arg) {
     *recieved_string = malloc(sizeof(char) * *recv_str_len);
 
     fprintf(stderr, "[THREAD] Thread Created for Client %d\n", i);
+
+    char *thread_avail_flags = init_avail_flags(WORKER_COUNT);
+    pthread_t thread_pool[WORKER_COUNT];
 
     while(1) {
         bzero(buffer, BUFFER_LEN);
@@ -77,26 +80,53 @@ void *client_handler(void *thread_arg) {
                 cmd[4] = '\0';
             }
 
+            int i;
+            while((i = get_avail_thread(thread_avail_flags, CLIENT_COUNT)) == -1);
+
+            worker_arg_t *worker_arg = malloc(sizeof(worker_arg_t));
+
+            worker_arg->newsockfd = newsockfd;
+            worker_arg->command_str = cmd;
+            worker_arg->client_id = i;
+
+
             if(strcmp("PING", cmd) == 0) {
-                ping_handler(newsockfd, cmd);
+                //ping_handler(newsockfd, cmd);
+                if((pthread_create(thread_pool + i, NULL, ping_handler, (void*)worker_arg)) < 0) {
+                    perror("ERROR creating thread");
+                }
 
             } else if(strcmp("PONG", cmd) == 0) {
-                pong_handler(newsockfd, cmd);
+                //pong_handler(newsockfd, cmd);
+                if((pthread_create(thread_pool + i, NULL, pong_handler, (void*)worker_arg)) < 0) {
+                    perror("ERROR creating thread");
+                }
 
             } else if(strcmp("OKAY", cmd) == 0) {
-                okay_handler(newsockfd, cmd);
+                //okay_handler(newsockfd, cmd);
+                if((pthread_create(thread_pool + i, NULL, okay_handler, (void*)worker_arg)) < 0) {
+                    perror("ERROR creating thread");
+                }
 
             } else if(strcmp("ERRO", cmd) == 0) {
-                erro_handler(newsockfd, cmd);
+                //erro_handler(newsockfd, cmd);
+                if((pthread_create(thread_pool + i, NULL, erro_handler, (void*)worker_arg)) < 0) {
+                    perror("ERROR creating thread");
+                }
 
             } else if(strcmp("SOLN", cmd) == 0) {
-                soln_handler(newsockfd, cmd);
+                //soln_handler(newsockfd, cmd);
+                if((pthread_create(thread_pool + i, NULL, soln_handler, (void*)worker_arg)) < 0) {
+                    perror("ERROR creating thread");
+                }
 
             } else {
-                unkn_handler(newsockfd, cmd);
+                //unkn_handler(newsockfd, cmd);
+                if((pthread_create(thread_pool + i, NULL, unkn_handler, (void*)worker_arg)) < 0) {
+                    perror("ERROR creating thread");
+                }
             }
 
-            free(cmd);
         }
     }
 
@@ -129,9 +159,9 @@ BYTE *get_target(uint32_t difficulty) {
     uint256_init(beta);
 
     //...disgusting
-    beta[30] = (difficulty >> (8*1)) & 0xFF;
-    beta[31] = (difficulty >> (8*2)) & 0xFF;
-    beta[32] = (difficulty >> (8*3)) & 0xFF;
+    beta[29] = (difficulty >> (8*1)) & 0xFF;
+    beta[30] = (difficulty >> (8*2)) & 0xFF;
+    beta[31] = (difficulty >> (8*3)) & 0xFF;
 
     fprintf(stderr, "[THREAD] beta is:   ");
     byte_print(stderr, beta, 32);
@@ -166,22 +196,44 @@ BYTE *get_x(BYTE* seed, uint64_t solution) {
     fprintf(stderr, "[THREAD] Parsing x with solution %lu %lx\n", solution, solution);
 
     BYTE *x = malloc(sizeof(BYTE) * 40);
-    memcpy(x, seed, 32);
+    uint64_t tmp = ntohl(solution);
 
-    /*
-    memcpy(x+32, &solution, 8);
-    */
-    BYTE *temp = malloc(sizeof(BYTE) * 8);
-    memcpy(temp, &solution, 8);
-    for(int i = 0; i < 8; i++) {
-        x[32 + i] = temp[7-i];
+    if(tmp != solution) {
+        // little endian
+
+        BYTE *temp = malloc(sizeof(BYTE) * 32);
+        memcpy(temp, seed, 32);
+        for(int i = 0; i < 32; i++) {
+            x[8+i] = temp[31-i];
+        }
+
+        BYTE *temp2 = malloc(sizeof(BYTE) * 8);
+        memcpy(temp2, &solution, 8);
+        for(int i = 0; i < 8; i++) {
+            x[i] = temp2[i];
+        }
+
+        free(temp);
+        free(temp2);
+        /*
+        */
+
+    } else {
+        memcpy(x, seed, 32);
+        memcpy(x+32, &solution, 8);
     }
-    free(temp);
-
+    
     /*
-    BYTE *x2 = malloc(sizeof(BYTE) * 40);
-    for(int i = 0; i < 40; i++)
-        x2[39-i] = x[i];
+    */
+    /*
+    BYTE *x = malloc(sizeof(BYTE) * 32);
+    bzero(temp, 32);
+
+    memcpy(temp+24, &solution, 8);
+    fprintf(stderr, "[THREAD] temp: ");
+    byte_print(stderr, temp, 32);
+
+    *x = *seed | *temp;
     */
 
     fprintf(stderr, "[THREAD] x: ");
@@ -194,28 +246,32 @@ int is_valid_soln(BYTE *target, BYTE* seed, uint64_t solution) {
     fprintf(stderr, "[THREAD] checking if cat is valid\n");
 
     BYTE *x = get_x(seed, solution);
-	BYTE y[SHA256_BLOCK_SIZE];
+	BYTE buf[SHA256_BLOCK_SIZE];
 
 	SHA256_CTX ctx;
 
 	sha256_init(&ctx);
 	sha256_update(&ctx, x, 40);
-	sha256_final(&ctx, y);
+	sha256_final(&ctx, buf);
 
 	sha256_init(&ctx);
-	sha256_update(&ctx, y, SHA256_BLOCK_SIZE);
-	sha256_final(&ctx, y);
+	sha256_update(&ctx, buf, SHA256_BLOCK_SIZE);
+	sha256_final(&ctx, buf);
 
     fprintf(stderr, "[THREAD] y: ");
-    byte_print(stderr, y, 32);
+    byte_print(stderr, buf, 32);
 
     fprintf(stderr, "[THREAD] t: ");
     byte_print(stderr, target, 32);
 
-    return sha256_compare(y, target);
+    return sha256_compare(buf, target);
 }
 
-void soln_handler(int *newsockfd, char *command_str) {
+void *soln_handler(void *worker_arg) {
+    worker_arg_t *arg = (worker_arg_t*) worker_arg;
+    int *newsockfd = arg->newsockfd;
+    char *command_str = arg->command_str;
+
     uint32_t difficulty;
     uint64_t solution;
     char raw_seed[64];
@@ -243,41 +299,73 @@ void soln_handler(int *newsockfd, char *command_str) {
     }
 
     fprintf(stderr, "[THREAD] Handling SOLN Success\n");
+
+    free_worker_arg(worker_arg);
+    return 0;
 }
 
-void unkn_handler(int *newsockfd, char *command_str) {
+void *unkn_handler(void *worker_arg) {
+    worker_arg_t *arg = (worker_arg_t*) worker_arg;
+    int *newsockfd = arg->newsockfd;
+
     char to_send[45] = "ERRO\tUnknown command.\r\n";
     send_message(newsockfd, to_send);
+
+    free_worker_arg(worker_arg);
+    return 0;
 }
 
-void erro_handler(int *newsockfd, char *command_str) {
+void *erro_handler(void *worker_arg) {
+    worker_arg_t *arg = (worker_arg_t*) worker_arg;
+    int *newsockfd = arg->newsockfd;
+
     char to_send[45] = "ERRO\tThis is used to send YOU errors =.=\r\n";
     fprintf(stderr, "[THREAD] Handling ERRO\n");
     send_message(newsockfd, to_send);
     fprintf(stderr, "[THREAD] Handling ERRO Success\n");
+
+    free_worker_arg(worker_arg);
+    return 0;
 }
 
-void okay_handler(int *newsockfd, char *command_str) {
+void *okay_handler(void *worker_arg) {
+    worker_arg_t *arg = (worker_arg_t*) worker_arg;
+    int *newsockfd = arg->newsockfd;
+
     char to_send[45] = "ERRO\tDude it's not okay to send OKAY okay?\r\n";
     fprintf(stderr, "[THREAD] Handling OKAY\n");
     send_message(newsockfd, to_send);
     fprintf(stderr, "[THREAD] Handling OKAY Success\n");
+
+    free_worker_arg(worker_arg);
+    return 0;
 }
 
-void pong_handler(int *newsockfd, char *command_str) {
+void *pong_handler(void *worker_arg) {
+    worker_arg_t *arg = (worker_arg_t*) worker_arg;
+    int *newsockfd = arg->newsockfd;
+
     char to_send[45] = "ERRO\tPONG is strictly reserved for server\r\n";
     fprintf(stderr, "[THREAD] Handling PONG\n");
     send_message(newsockfd, to_send);
     fprintf(stderr, "[THREAD] Handling PONG Success\n");
+
+    free_worker_arg(worker_arg);
+    return 0;
 }
 
-void ping_handler(int *newsockfd, char *command_str) {
+void *ping_handler(void *worker_arg) {
+    worker_arg_t *arg = (worker_arg_t*) worker_arg;
+    int *newsockfd = arg->newsockfd;
+
     fprintf(stderr, "[THREAD] Handling PING\n");
     send_message(newsockfd, "PONG\r\n");
     fprintf(stderr, "[THREAD] Handling PING Success\n");
+
+    free_worker_arg(worker_arg);
+    return 0;
 }
 
-//TODO: 40 byte all the time
 void send_message(int *newsockfd, char* to_send) {
     int n;
     if ((n = write(*newsockfd, to_send, strlen(to_send))) <= 0) {
