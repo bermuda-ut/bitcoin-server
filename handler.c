@@ -52,14 +52,6 @@ void *client_handler(void *thread_arg) {
         fprintf(stderr, "[THREAD] Client %d sent: %s", i, buffer);
         fprintf(stderr, "[THREAD] Client %d cmds: %s\n", i, *recieved_string);
 
-        /*
-        fprintf(stderr, "         Breakdown: ");
-        for(int i = 0; i < (int)strlen(*recieved_string); i++) {
-            fprintf(stderr, "%d ", (*recieved_string)[i]);
-        }
-        fprintf(stderr, "\n");
-        */
-
         while((cmd = get_command(recieved_string)) != NULL) {
             fprintf(stderr, "Was able to get a command: %s\n", cmd);
 
@@ -68,63 +60,47 @@ void *client_handler(void *thread_arg) {
             }
 
             int i;
+            // wait for a thread to be available
             while((i = get_avail_thread(thread_avail_flags, CLIENT_COUNT)) == -1);
 
             worker_arg_t *worker_arg = malloc(sizeof(worker_arg_t));
+            wrapper_arg_t *wrapper_arg = malloc(sizeof(wrapper_arg_t));
 
             worker_arg->newsockfd = newsockfd;
             worker_arg->command_str = cmd;
             worker_arg->client_id = i;
-            worker_arg->flag = thread_avail_flags + i;
-            pthread_t *cmd_thread = thread_pool + i;
+
+            wrapper_arg->flag = thread_avail_flags + i;
+            wrapper_arg->worker_arg = worker_arg;
 
             if(strcmp("PING", cmd) == 0) {
-                //ping_handler(newsockfd, cmd);
-                if((pthread_create(cmd_thread, NULL, ping_handler, (void*)worker_arg)) < 0) {
-                    perror("ERROR creating thread");
-                }
+                wrapper_arg->worker_func = ping_handler;
 
             } else if(strcmp("PONG", cmd) == 0) {
-                //pong_handler(newsockfd, cmd);
-                if((pthread_create(cmd_thread, NULL, pong_handler, (void*)worker_arg)) < 0) {
-                    perror("ERROR creating thread");
-                }
+                wrapper_arg->worker_func = pong_handler;
 
             } else if(strcmp("OKAY", cmd) == 0) {
-                //okay_handler(newsockfd, cmd);
-                if((pthread_create(cmd_thread, NULL, okay_handler, (void*)worker_arg)) < 0) {
-                    perror("ERROR creating thread");
-                }
+                wrapper_arg->worker_func = okay_handler;
 
             } else if(strcmp("ERRO", cmd) == 0) {
-                //erro_handler(newsockfd, cmd);
-                if((pthread_create(cmd_thread, NULL, erro_handler, (void*)worker_arg)) < 0) {
-                    perror("ERROR creating thread");
-                }
+                wrapper_arg->worker_func = erro_handler;
 
             } else if(strcmp("SOLN", cmd) == 0) {
-                //soln_handler(newsockfd, cmd);
-                if((pthread_create(cmd_thread, NULL, soln_handler, (void*)worker_arg)) < 0) {
-                    perror("ERROR creating thread");
-                }
+                wrapper_arg->worker_func = soln_handler;
 
             } else if(strcmp("SLEP", cmd) == 0) {
-                //soln_handler(newsockfd, cmd);
-                if((pthread_create(cmd_thread, NULL, slep_handler, (void*)worker_arg)) < 0) {
-                    perror("ERROR creating thread");
-                }
+                wrapper_arg->worker_func = slep_handler;
 
             } else if(strcmp("WORK", cmd) == 0) {
-                //soln_handler(newsockfd, cmd);
-                if((pthread_create(cmd_thread, NULL, work_handler, (void*)worker_arg)) < 0) {
-                    perror("ERROR creating thread");
-                }
+                wrapper_arg->worker_func = work_handler;
 
             } else {
-                //unkn_handler(newsockfd, cmd);
-                if((pthread_create(cmd_thread, NULL, unkn_handler, (void*)worker_arg)) < 0) {
-                    perror("ERROR creating thread");
-                }
+                wrapper_arg->worker_func = unkn_handler;
+            }
+
+            pthread_t *cmd_thread = thread_pool + i;
+            if((pthread_create(cmd_thread, NULL, handler_wrapper, (void*)wrapper_arg)) < 0) {
+                perror("ERROR creating thread");
             }
         }
     }
@@ -142,19 +118,27 @@ void *client_handler(void *thread_arg) {
     return 0;
 }
 
-void *work_handler(void *worker_arg) {
-    worker_arg_t *arg = (worker_arg_t*) worker_arg;
-    int *newsockfd = arg->newsockfd;
-    char *command_str = arg->command_str;
+void *handler_wrapper(void *wrapper_arg) {
+    wrapper_arg_t *arg = (wrapper_arg_t*) wrapper_arg;
+    char *flag = arg->flag;
+
+    arg->worker_func(arg->worker_arg);
+
+    reset_flag(flag);
+    free_worker_arg(arg->worker_arg);
+    free(wrapper_arg);
 
     return 0;
 }
 
-void *soln_handler(void *worker_arg) {
-    worker_arg_t *arg = (worker_arg_t*) worker_arg;
+void work_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
     char *command_str = arg->command_str;
-    char *flag = arg->flag;
+}
+
+void soln_handler(worker_arg_t *arg) {
+    int *newsockfd = arg->newsockfd;
+    char *command_str = arg->command_str;
 
     uint32_t difficulty;
     uint64_t solution;
@@ -183,88 +167,52 @@ void *soln_handler(void *worker_arg) {
     }
 
     fprintf(stderr, "[THREAD] Handling SOLN Success\n");
-
-    reset_flag(flag);
-    free_worker_arg(worker_arg);
-    return 0;
 }
 
-void *unkn_handler(void *worker_arg) {
-    worker_arg_t *arg = (worker_arg_t*) worker_arg;
+void unkn_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
-    char *flag = arg->flag;
 
     char to_send[45] = "ERRO\tUnknown command.\r\n";
     send_message(newsockfd, to_send);
-
-    reset_flag(flag);
-    free_worker_arg(worker_arg);
-    return 0;
 }
 
-void *erro_handler(void *worker_arg) {
-    worker_arg_t *arg = (worker_arg_t*) worker_arg;
+void erro_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
-    char *flag = arg->flag;
 
     char to_send[45] = "ERRO\tThis is used to send YOU errors =.=\r\n";
     fprintf(stderr, "[THREAD] Handling ERRO\n");
     send_message(newsockfd, to_send);
     fprintf(stderr, "[THREAD] Handling ERRO Success\n");
-
-    reset_flag(flag);
-    free_worker_arg(worker_arg);
-    return 0;
 }
 
-void *okay_handler(void *worker_arg) {
-    worker_arg_t *arg = (worker_arg_t*) worker_arg;
+void okay_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
-    char *flag = arg->flag;
 
     char to_send[45] = "ERRO\tDude it's not okay to send OKAY okay?\r\n";
     fprintf(stderr, "[THREAD] Handling OKAY\n");
     send_message(newsockfd, to_send);
     fprintf(stderr, "[THREAD] Handling OKAY Success\n");
-
-    reset_flag(flag);
-    free_worker_arg(worker_arg);
-    return 0;
 }
 
-void *pong_handler(void *worker_arg) {
-    worker_arg_t *arg = (worker_arg_t*) worker_arg;
+void pong_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
-    char *flag = arg->flag;
 
     char to_send[45] = "ERRO\tPONG is strictly reserved for server\r\n";
     fprintf(stderr, "[THREAD] Handling PONG\n");
     send_message(newsockfd, to_send);
     fprintf(stderr, "[THREAD] Handling PONG Success\n");
-
-    reset_flag(flag);
-    free_worker_arg(worker_arg);
-    return 0;
 }
 
-void *ping_handler(void *worker_arg) {
-    worker_arg_t *arg = (worker_arg_t*) worker_arg;
+void ping_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
-    char *flag = arg->flag;
 
     fprintf(stderr, "[THREAD] Handling PING\n");
     send_message(newsockfd, "PONG\r\n");
     fprintf(stderr, "[THREAD] Handling PING Success\n");
-
-    reset_flag(flag);
-    free_worker_arg(worker_arg);
-    return 0;
 }
 
-void *slep_handler(void *worker_arg) {
-    worker_arg_t *arg = (worker_arg_t*) worker_arg;
+void slep_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
-    char *flag = arg->flag;
 
     fprintf(stderr, "[THREAD] Handling SLEP\n");
     char to_send[45] = "OKAY\tsleeping 3 seconds..\r\n";
@@ -275,11 +223,6 @@ void *slep_handler(void *worker_arg) {
     char to_send2[45] = "OKAY\tI just woke up!\r\n";
     send_message(newsockfd, to_send2);
     fprintf(stderr, "[THREAD] Handling SLEP Success\n");
-
-    reset_flag(flag);
-    free_worker_arg(worker_arg);
-    return 0;
-
 }
 
 void free_worker_arg(worker_arg_t *arg) {

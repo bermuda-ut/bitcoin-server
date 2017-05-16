@@ -5,7 +5,7 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-15 23:46:21
+#   LastChange: 2017-05-16 13:28:11
 #      History:
 =============================================================================*/
 #ifndef HANDLER_HELPER

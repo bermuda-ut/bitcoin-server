@@ -5,7 +5,7 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-15 19:16:55
+#   LastChange: 2017-05-16 13:28:11
 #      History:
 =============================================================================*/
 #ifndef HANDLER
@@ -20,24 +20,27 @@
 typedef struct {
     int* newsockfd;
     char* command_str;
-    char* flag;
     int client_id;
 } worker_arg_t;
 
+typedef struct {
+    void (*worker_func)(worker_arg_t*);
+    char* flag;
+    worker_arg_t *worker_arg;
+} wrapper_arg_t;
+
 extern void *client_handler(void *);
 
-void *ping_handler(void *);
-void *pong_handler(void *);
-void *okay_handler(void *);
-void *erro_handler(void *);
-void *soln_handler(void *);
-void *unkn_handler(void *);
-void *work_handler(void *);
-void *slep_handler(void *);
+void *handler_wrapper(void *);
 
-int is_valid_soln(BYTE *, BYTE *, uint64_t);
-
-void send_message(int *, char*);
+void ping_handler(worker_arg_t *);
+void pong_handler(worker_arg_t *);
+void okay_handler(worker_arg_t *);
+void erro_handler(worker_arg_t *);
+void soln_handler(worker_arg_t *);
+void unkn_handler(worker_arg_t *);
+void work_handler(worker_arg_t *);
+void slep_handler(worker_arg_t *);
 
 void free_worker_arg(worker_arg_t *arg);
 
