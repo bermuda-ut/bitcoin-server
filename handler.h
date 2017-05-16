@@ -35,6 +35,19 @@ typedef struct {
     worker_arg_t *worker_arg;
 } wrapper_arg_t;
 
+typedef struct {
+    uint64_t* n;
+    uint64_t* answer;
+    BYTE* target;
+    BYTE* seed;
+    pthread_mutex_t *mutex;
+} work_btch_arg_t;
+
+typedef struct queue {
+    worker_arg_t* worker_arg;
+    struct queue *next;
+} queue_t;
+
 extern void *client_handler(void *);
 
 void *handler_wrapper(void *);
@@ -45,9 +58,12 @@ void okay_handler(worker_arg_t *);
 void erro_handler(worker_arg_t *);
 void soln_handler(worker_arg_t *);
 void unkn_handler(worker_arg_t *);
-void work_handler(worker_arg_t *);
 void slep_handler(worker_arg_t *);
 
+void *work_manager(void*);
+void *work_btch(void*);
+
 void free_worker_arg(worker_arg_t *arg);
+worker_arg_t* pop_queue(queue_t**);
 
 #endif
