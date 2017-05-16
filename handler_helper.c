@@ -31,26 +31,32 @@ BYTE *hstob(char *hex_string, size_t size) {
     return val;
 }
 
-char* get_command(char** full_cmd_str, int len, int* cmd_len) {
-    for(int i = 0; i < len - 1; i++) {
+char* get_command(char** full_cmd_str, int len, int *used_len) {
+    for(int i = 0; i < *used_len - 1; i++) {
         if((*full_cmd_str)[i] == '\r' && (*full_cmd_str)[i+1] == '\n') {
             // 0 1 2 3 4  5  6 7 8 9
             // P I N G \r \n P I N G
             //          ^ i is here
-
+            //fprintf(stdout, "------\nBefore %s\n", *full_cmd_str);
             char *cmd = malloc(sizeof(char) * (i + 1));
+            memcpy(cmd, *full_cmd_str, i);
 
+            /*
             for(int j = 0; j < i; j++) {
                 cmd[j] = (*full_cmd_str)[j];
             }
+            */
             cmd[i] = '\0';
 
             char *rest = malloc(sizeof(char) * len);
-            strcpy(rest, (*full_cmd_str) + i + 2);
+            memcpy(rest, (*full_cmd_str) + i + 2, len - i - 2);
 
             free(*full_cmd_str);
             *full_cmd_str = rest;
-            *cmd_len = i+1;
+            *used_len -= (i + 2);
+
+            //fprintf(stdout, "Extrt: %s\n", cmd);
+            //fprintf(stdout, "After %s\n", *full_cmd_str);
 
             return cmd;
         }
@@ -59,17 +65,19 @@ char* get_command(char** full_cmd_str, int len, int* cmd_len) {
     return NULL;
 }
 
-void join_client_command(char **str, char *command_str, int *str_len) {
-    int currlen = strlen(*str);
+void join_client_command(char **str, char *command_str, int *str_len, int* used_len) {
+    int cmd_len = strlen(command_str);
+    //fprintf(stdout, "JOIN %s and %s\n", *str, command_str);
 
-    if(currlen > *str_len - 3) {
-        int tmp = *str_len;
+    while(*str_len < *used_len + cmd_len + 1) {
+        //int tmp = *str_len;
         *str_len = *str_len * 2;
-        str = realloc(str, sizeof(char) * *str_len);
-        bzero(str+tmp, *str_len - tmp);
+        *str = realloc(*str, sizeof(char) * *str_len);
+        //bzero((*str)+tmp, *str_len - tmp);
     }
 
-    strcat(*str, command_str);
+    memcpy((*str)+*used_len, command_str, cmd_len);
+    *used_len += cmd_len;
 }
 
 void send_formatted(int *newsockfd, char* info, char* msg) {

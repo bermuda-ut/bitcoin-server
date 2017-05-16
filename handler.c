@@ -23,8 +23,10 @@ void *client_handler(void *thread_arg) {
         i = args->i;
     
     int n,
+        *recv_used_len = malloc(sizeof(int)),
         *recv_str_len = malloc(sizeof(int));
     *recv_str_len = INIT_CMD_STR_SIZE;
+    *recv_used_len = 0;
 
     char *cmd,
         **recieved_string = malloc(sizeof(char*));
@@ -50,20 +52,19 @@ void *client_handler(void *thread_arg) {
             break;
         }
 
-        join_client_command(recieved_string, buffer, recv_str_len);
+        join_client_command(recieved_string, buffer, recv_str_len, recv_used_len);
 
-        fprintf(stderr, "[THREAD] Client %d sent: %s", i, buffer);
-        fprintf(stderr, "[THREAD] Client %d cmds: %s\n", i, *recieved_string);
+        //fprintf(stderr, "[THREAD] Client %d sent: %s", i, buffer);
+        //fprintf(stderr, "[THREAD] Client %d cmds: %s\n", i, *recieved_string);
 
         if(check_avail_thread(thread_avail_flags, CLIENT_COUNT) == 0) {
             fprintf(stderr, "[THREAD] Client has reached maximum thread limit. Not parsing commands until a thread becomes available.\n");
             continue;
         }
 
-        int temp_cmd_len = 0;
-        while((cmd = get_command(recieved_string, *recv_str_len, &temp_cmd_len)) != NULL) {
+        while((cmd = get_command(recieved_string, *recv_str_len, recv_used_len)) != NULL) {
             fprintf(stderr, "[THREAD] Command: ");
-            for(int i = 0; i < temp_cmd_len; i++)
+            for(int i = 0; i < strlen(cmd); i++)
                 fprintf(stderr, "%c", cmd[i]);
             fprintf(stderr, "\n");
 
@@ -84,7 +85,7 @@ void *client_handler(void *thread_arg) {
             worker_arg->command_str = cmd;
             worker_arg->client_id = i;
             worker_arg->command_len = malloc(sizeof(int));
-            *(worker_arg->command_len) = temp_cmd_len;
+            *(worker_arg->command_len) = strlen(cmd);
 
             wrapper_arg->flag = thread_avail_flags + i;
             wrapper_arg->worker_arg = worker_arg;
@@ -162,7 +163,7 @@ void soln_handler(worker_arg_t *arg) {
     uint64_t solution;
     char raw_seed[64];
     
-    sscanf(command_str + 5, "%x %s %lx\r\n", &difficulty, raw_seed, &solution);
+    sscanf(command_str + 5, "%x %s %lx", &difficulty, raw_seed, &solution);
     difficulty = ntohl(difficulty);
     //solution   = ntohl(solution);
 
@@ -189,7 +190,10 @@ void soln_handler(worker_arg_t *arg) {
 
 void unkn_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
-    fprintf(stdout, "Unknown command recieved\n");
+    char *command_str = arg->command_str;
+
+    fprintf(stdout, "[THREAD] Unknown command recieved: %s\n", command_str);
+
     send_formatted(newsockfd, "ERRO", "Unknown command");
 }
 
