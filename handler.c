@@ -179,7 +179,7 @@ void soln_handler(worker_arg_t *arg) {
 
     int res;
     if((res = is_valid_soln(target, seed, solution)) == -1) {
-        send_message(newsockfd, "OKAY\r\n");
+        send_message(newsockfd, "OKAY\r\n", 6);
     } else {
         fprintf(stderr, "[THREAD] Solution result %d\n", res);
         send_formatted(newsockfd, "ERRO", "Not a valid solution");
@@ -225,7 +225,7 @@ void ping_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
 
     fprintf(stderr, "[THREAD] Handling PING\n");
-    send_message(newsockfd, "PONG\r\n");
+    send_message(newsockfd, "PONG\r\n", 6);
     fprintf(stderr, "[THREAD] Handling PING Success\n");
 }
 

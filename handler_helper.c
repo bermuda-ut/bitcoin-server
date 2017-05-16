@@ -83,12 +83,11 @@ void join_client_command(char **str, char *command_str, int *str_len, int* used_
 void send_formatted(int *newsockfd, char* info, char* msg) {
     char *to_send = malloc(sizeof(char) * 45);
 
+    for(int i = 0; i < 45; i++)
+        to_send[i] = 32;
+
     memcpy(to_send, info, 4);
     to_send[4] = '\t';
-
-    for(int i = 0; i < 40; i++) {
-        to_send[5+i] = 32;
-    }
 
     if(msg) {
         int len = strlen(msg);
@@ -103,13 +102,13 @@ void send_formatted(int *newsockfd, char* info, char* msg) {
     to_send[43] = '\r';
     to_send[44] = '\n';
 
-    send_message(newsockfd, to_send);
+    send_message(newsockfd, to_send, 45);
 }
 
-void send_message(int *newsockfd, char* to_send) {
+void send_message(int *newsockfd, char* to_send, int len) {
     int n;
 
-    if ((n = write(*newsockfd, to_send, strlen(to_send))) <= 0) {
+    if ((n = write(*newsockfd, to_send, len)) <= 0) {
         perror("ERROR writing to socket");
     }
 }

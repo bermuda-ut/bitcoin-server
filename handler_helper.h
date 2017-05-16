@@ -23,7 +23,7 @@ extern BYTE *get_x(BYTE* seed, uint64_t solution);
 extern BYTE *seed_from_raw(char* raw_seed);
 extern BYTE *get_target(uint32_t difficulty);
 
-void send_message(int *newsockfd, char* to_send);
+void send_message(int *newsockfd, char* to_send, int len);
 extern void send_formatted(int *newsockfd, char* info, char* msg);
 extern void byte_print(FILE *stream, BYTE *byte, size_t size);
 #endif
