@@ -192,7 +192,7 @@ void unkn_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
     char *command_str = arg->command_str;
 
-    fprintf(stdout, "[THREAD] Unknown command recieved: %s\n", command_str);
+    fprintf(stderr, "[THREAD] Unknown command recieved: %s\n", command_str);
 
     send_formatted(newsockfd, "ERRO", "Unknown command");
 }
