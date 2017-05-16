@@ -18,5 +18,6 @@ typedef struct {
     int i;
 } thread_arg_t;
 
-char *init_avail_flags(int len);
-int get_avail_thread(char* flags, int len);
+extern char *init_avail_flags(int len);
+extern int get_avail_thread(char* flags, int len);
+extern void reset_flag(char* flag);

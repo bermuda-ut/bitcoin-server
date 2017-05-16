@@ -10,13 +10,13 @@
 =============================================================================*/
 #include "threads.h"
 
-extern char *init_avail_flags(int count) {
+char *init_avail_flags(int count) {
     char* flags = malloc(sizeof(char) * count);
     bzero(flags, count);
     return flags;
 }
 
-extern int get_avail_thread(char* flags, int count) {
+int get_avail_thread(char* flags, int count) {
     for(int i = 0; i < count; i++) {
         if(flags[i] == 0) {
             flags[i] = 1;
@@ -24,4 +24,8 @@ extern int get_avail_thread(char* flags, int count) {
         }
     }
     return -1;
+}
+
+void reset_flag(char* flag) {
+    *flag = 0;
 }

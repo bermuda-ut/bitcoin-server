@@ -12,6 +12,7 @@
 #define HANDLER
 
 #define INIT_CMD_STR_SIZE 128
+#define CLIENT_THREAD_COUNT 20
 #define WORKER_COUNT 10
 
 #include "handler_helper.h"
@@ -19,6 +20,7 @@
 typedef struct {
     int* newsockfd;
     char* command_str;
+    char* flag;
     int client_id;
 } worker_arg_t;
 
@@ -31,6 +33,7 @@ void *erro_handler(void *);
 void *soln_handler(void *);
 void *unkn_handler(void *);
 void *work_handler(void *);
+void *slep_handler(void *);
 
 int is_valid_soln(BYTE *, BYTE *, uint64_t);
 
