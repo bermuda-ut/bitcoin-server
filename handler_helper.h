@@ -15,7 +15,7 @@
 #include <arpa/inet.h>
 
 extern BYTE *hstob(char *hex_string, size_t size);
-extern char* get_command(char** full_cmd_str);
+extern char* get_command(char** full_cmd_str, int len, int* cmd_len);
 extern void join_client_command(char **str, char *command_str, int *str_len);
 
 extern int is_valid_soln(BYTE *target, BYTE* seed, uint64_t solution);
@@ -23,6 +23,7 @@ extern BYTE *get_x(BYTE* seed, uint64_t solution);
 extern BYTE *seed_from_raw(char* raw_seed);
 extern BYTE *get_target(uint32_t difficulty);
 
-extern void send_message(int *newsockfd, char* to_send);
+void send_message(int *newsockfd, char* to_send);
+extern void send_formatted(int *newsockfd, char* info, char* msg);
 extern void byte_print(FILE *stream, BYTE *byte, size_t size);
 #endif

@@ -31,9 +31,7 @@ BYTE *hstob(char *hex_string, size_t size) {
     return val;
 }
 
-char* get_command(char** full_cmd_str) {
-    int len = strlen(*full_cmd_str);
-
+char* get_command(char** full_cmd_str, int len, int* cmd_len) {
     for(int i = 0; i < len - 1; i++) {
         if((*full_cmd_str)[i] == '\r' && (*full_cmd_str)[i+1] == '\n') {
             // 0 1 2 3 4  5  6 7 8 9
@@ -52,6 +50,7 @@ char* get_command(char** full_cmd_str) {
 
             free(*full_cmd_str);
             *full_cmd_str = rest;
+            *cmd_len = i+1;
 
             return cmd;
         }
@@ -73,13 +72,39 @@ void join_client_command(char **str, char *command_str, int *str_len) {
     strcat(*str, command_str);
 }
 
+void send_formatted(int *newsockfd, char* info, char* msg) {
+    char *to_send = malloc(sizeof(char) * 45);
+
+    memcpy(to_send, info, 4);
+    to_send[4] = '\t';
+
+    for(int i = 0; i < 40; i++) {
+        to_send[5+i] = 32;
+    }
+
+    if(msg) {
+        int len = strlen(msg);
+        int i = len;
+
+        if(i > 40)
+            i = 40;
+
+        memcpy(to_send+5, msg, i);
+    }
+
+    to_send[43] = '\r';
+    to_send[44] = '\n';
+
+    send_message(newsockfd, to_send);
+}
+
 void send_message(int *newsockfd, char* to_send) {
     int n;
+
     if ((n = write(*newsockfd, to_send, strlen(to_send))) <= 0) {
         perror("ERROR writing to socket");
     }
 }
-
 
 void byte_print(FILE *stream, BYTE *byte, size_t size) {
     fprintf (stream, "0x");

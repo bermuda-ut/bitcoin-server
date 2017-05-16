@@ -5,12 +5,15 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-14 21:46:54
+#   LastChange: 2017-05-16 14:14:10
 =============================================================================*/
 #include "handler.h"
 #include "threads.h"
 #include "driver.h"
 
+/*
+ * Client handler
+ * */
 void *client_handler(void *thread_arg) {
     thread_arg_t *args = (thread_arg_t*) thread_arg;
 
@@ -52,16 +55,27 @@ void *client_handler(void *thread_arg) {
         fprintf(stderr, "[THREAD] Client %d sent: %s", i, buffer);
         fprintf(stderr, "[THREAD] Client %d cmds: %s\n", i, *recieved_string);
 
-        while((cmd = get_command(recieved_string)) != NULL) {
-            fprintf(stderr, "Was able to get a command: %s\n", cmd);
+        if(check_avail_thread(thread_avail_flags, CLIENT_COUNT) == 0) {
+            fprintf(stderr, "[THREAD] Client has reached maximum thread limit. Not parsing commands until a thread becomes available.\n");
+            continue;
+        }
 
-            if(strlen(cmd) > 4 && cmd[4] == ' ') {
+        int temp_cmd_len = 0;
+        while((cmd = get_command(recieved_string, *recv_str_len, &temp_cmd_len)) != NULL) {
+            fprintf(stderr, "[THREAD] Command: ");
+            for(int i = 0; i < temp_cmd_len; i++)
+                fprintf(stderr, "%c", cmd[i]);
+            fprintf(stderr, "\n");
+
+            // so that we can strcmp only first 4 characters :)
+            if(strlen(cmd) > 4 && cmd[4] == ' ')
                 cmd[4] = '\0';
-            }
 
-            int i;
             // wait for a thread to be available
-            while((i = get_avail_thread(thread_avail_flags, CLIENT_COUNT)) == -1);
+            int i;
+            while((i = get_avail_thread(thread_avail_flags, CLIENT_COUNT)) == -1) {
+                // do I need to save state here?
+            };
 
             worker_arg_t *worker_arg = malloc(sizeof(worker_arg_t));
             wrapper_arg_t *wrapper_arg = malloc(sizeof(wrapper_arg_t));
@@ -69,6 +83,8 @@ void *client_handler(void *thread_arg) {
             worker_arg->newsockfd = newsockfd;
             worker_arg->command_str = cmd;
             worker_arg->client_id = i;
+            worker_arg->command_len = malloc(sizeof(int));
+            *(worker_arg->command_len) = temp_cmd_len;
 
             wrapper_arg->flag = thread_avail_flags + i;
             wrapper_arg->worker_arg = worker_arg;
@@ -134,6 +150,8 @@ void *handler_wrapper(void *wrapper_arg) {
 void work_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
     char *command_str = arg->command_str;
+    fprintf(stderr, "[THREAD] Handling WORK\n");
+    fprintf(stderr, "[THREAD] Handling WORK Success\n");
 }
 
 void soln_handler(worker_arg_t *arg) {
@@ -153,8 +171,8 @@ void soln_handler(worker_arg_t *arg) {
 
     /*
     char *to_send = malloc(sizeof(char)*9999);
-    */
     fprintf(stderr, "Calculating solution for d:%u s:%lu\r\n", difficulty, solution);
+    */
 
     fprintf(stderr, "[THREAD] Handling SOLN\n");
 
@@ -163,7 +181,7 @@ void soln_handler(worker_arg_t *arg) {
         send_message(newsockfd, "OKAY\r\n");
     } else {
         fprintf(stderr, "[THREAD] Solution result %d\n", res);
-        send_message(newsockfd, "ERRO\tNot a valid solution\r\n");
+        send_formatted(newsockfd, "ERRO", "Not a valid solution");
     }
 
     fprintf(stderr, "[THREAD] Handling SOLN Success\n");
@@ -171,35 +189,31 @@ void soln_handler(worker_arg_t *arg) {
 
 void unkn_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
-
-    char to_send[45] = "ERRO\tUnknown command.\r\n";
-    send_message(newsockfd, to_send);
+    fprintf(stdout, "Unknown command recieved\n");
+    send_formatted(newsockfd, "ERRO", "Unknown command");
 }
 
 void erro_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
 
-    char to_send[45] = "ERRO\tThis is used to send YOU errors =.=\r\n";
     fprintf(stderr, "[THREAD] Handling ERRO\n");
-    send_message(newsockfd, to_send);
+    send_formatted(newsockfd, "ERRO", "Only I can send YOU errors =.=");
     fprintf(stderr, "[THREAD] Handling ERRO Success\n");
 }
 
 void okay_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
 
-    char to_send[45] = "ERRO\tDude it's not okay to send OKAY okay?\r\n";
     fprintf(stderr, "[THREAD] Handling OKAY\n");
-    send_message(newsockfd, to_send);
+    send_formatted(newsockfd, "ERRO", "Dude it's not okay to send OKAY okay?");
     fprintf(stderr, "[THREAD] Handling OKAY Success\n");
 }
 
 void pong_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
 
-    char to_send[45] = "ERRO\tPONG is strictly reserved for server\r\n";
     fprintf(stderr, "[THREAD] Handling PONG\n");
-    send_message(newsockfd, to_send);
+    send_formatted(newsockfd, "ERRO", "PONG is strictly reserved for server");
     fprintf(stderr, "[THREAD] Handling PONG Success\n");
 }
 
@@ -215,13 +229,13 @@ void slep_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
 
     fprintf(stderr, "[THREAD] Handling SLEP\n");
-    char to_send[45] = "OKAY\tsleeping 3 seconds..\r\n";
-    send_message(newsockfd, to_send);
+    char *to_send = "sleeping 3 seconds..";
+    send_formatted(newsockfd, "OKAY", to_send);
 
     sleep(3);
 
-    char to_send2[45] = "OKAY\tI just woke up!\r\n";
-    send_message(newsockfd, to_send2);
+    to_send = "I just woke up!";
+    send_formatted(newsockfd, "OKAY", to_send);
     fprintf(stderr, "[THREAD] Handling SLEP Success\n");
 }
 

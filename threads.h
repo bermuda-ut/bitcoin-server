@@ -20,4 +20,5 @@ typedef struct {
 
 extern char *init_avail_flags(int len);
 extern int get_avail_thread(char* flags, int len);
+extern int check_avail_thread(char* flags, int len);
 extern void reset_flag(char* flag);

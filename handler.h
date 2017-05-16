@@ -5,20 +5,26 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-16 13:28:11
+#   LastChange: 2017-05-16 16:58:17
 #      History:
 =============================================================================*/
 #ifndef HANDLER
 #define HANDLER
 
+// simple starting point for a command length
 #define INIT_CMD_STR_SIZE 128
+
+// maximum number of concurrent threads a client can have
 #define CLIENT_THREAD_COUNT 20
+
+// number of threads used to calculate work for the client
 #define WORKER_COUNT 10
 
 #include "handler_helper.h"
 
 typedef struct {
     int* newsockfd;
+    int* command_len;
     char* command_str;
     int client_id;
 } worker_arg_t;

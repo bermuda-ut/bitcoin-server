@@ -43,7 +43,11 @@ int main(int argc, char **argv) {
             exit(EXIT_FAILURE);
         }
 
-        int i = get_avail_thread(thread_avail_flags, CLIENT_COUNT);
+        // wait for a thread to become available
+        int i;
+        while((i = get_avail_thread(thread_avail_flags, CLIENT_COUNT)) == -1) {
+            fprintf(stderr, "[SERVER] Maximum client capacity reached. Waiting for someone to disconnect.\n");
+        };
 
         thread_arg->newsockfd = newsockfd;
         thread_arg->flags = thread_avail_flags;

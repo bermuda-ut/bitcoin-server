@@ -26,6 +26,14 @@ int get_avail_thread(char* flags, int count) {
     return -1;
 }
 
+int check_avail_thread(char* flags, int count) {
+    for(int i = 0; i < count; i++) {
+        if(flags[i] == 0) {
+            return 1;
+        }
+    }
+    return -1;
+}
 void reset_flag(char* flag) {
     *flag = 0;
 }
