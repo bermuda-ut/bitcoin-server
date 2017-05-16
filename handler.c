@@ -5,7 +5,7 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-16 14:14:10
+#   LastChange: 2017-05-17 00:28:49
 =============================================================================*/
 #include "handler.h"
 #include "threads.h"
@@ -17,22 +17,21 @@
 void *client_handler(void *thread_arg) {
     thread_arg_t *args = (thread_arg_t*) thread_arg;
 
-	char buffer[BUFFER_LEN];
-    char *flags = args->flags;
+	char buffer[BUFFER_LEN],
+        *cmd,
+        **recieved_string = malloc(sizeof(char*)),
+        *flags = args->flags;
     int *newsockfd = args->newsockfd,
-        i = args->i;
-    
-    int n,
+        client_id = args->i,
+        n,
         *recv_used_len = malloc(sizeof(int)),
         *recv_str_len = malloc(sizeof(int));
+
     *recv_str_len = INIT_CMD_STR_SIZE;
     *recv_used_len = 0;
-
-    char *cmd,
-        **recieved_string = malloc(sizeof(char*));
     *recieved_string = malloc(sizeof(char) * *recv_str_len);
 
-    fprintf(stderr, "[THREAD] Thread Created for Client %d\n", i);
+    fprintf(stderr, "[THREAD] Thread Created for Client %d\n", client_id);
 
     char *thread_avail_flags = init_avail_flags(CLIENT_THREAD_COUNT);
     pthread_t thread_pool[CLIENT_THREAD_COUNT];
@@ -40,7 +39,7 @@ void *client_handler(void *thread_arg) {
     while(1) {
         bzero(buffer, BUFFER_LEN);
 
-        fprintf(stderr, "[THREAD] Waiting for Client %d input\n", i);
+        fprintf(stderr, "[THREAD] Waiting for Client %d input\n", client_id);
 
         if ((n = read(*newsockfd, buffer, BUFFER_LEN-1)) < 0) {
             perror("ERROR reading from socket");
@@ -48,7 +47,7 @@ void *client_handler(void *thread_arg) {
 
         } else if(n == 0) {
             // end of file
-            fprintf(stderr, "[THREAD] Client %d disconnected\n", i);
+            fprintf(stderr, "[THREAD] Client %d disconnected\n", client_id);
             break;
         }
 
@@ -120,7 +119,7 @@ void *client_handler(void *thread_arg) {
     }
 
     //flags[i] = 0;
-    reset_flag(flags+i);
+    reset_flag(flags+client_id);
     close(*newsockfd);
 
     // cancel any working threads
