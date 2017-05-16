@@ -63,10 +63,7 @@ void *client_handler(void *thread_arg) {
         }
 
         while((cmd = get_command(recieved_string, *recv_str_len, recv_used_len)) != NULL) {
-            fprintf(stderr, "[THREAD] Command: ");
-            for(int i = 0; i < strlen(cmd); i++)
-                fprintf(stderr, "%c", cmd[i]);
-            fprintf(stderr, "\n");
+            fprintf(stderr, "[THREAD] Command: %s\n", cmd);
 
             // so that we can strcmp only first 4 characters :)
             if(strlen(cmd) > 4 && cmd[4] == ' ')
@@ -75,7 +72,7 @@ void *client_handler(void *thread_arg) {
             // wait for a thread to be available
             int i;
             while((i = get_avail_thread(thread_avail_flags, CLIENT_COUNT)) == -1) {
-                // do I need to save state here?
+                // this will never happen
             };
 
             worker_arg_t *worker_arg = malloc(sizeof(worker_arg_t));
