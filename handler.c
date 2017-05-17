@@ -255,10 +255,16 @@ void work_handler(worker_arg_t *arg) {
         sleep(1);
     }
 
-    fprintf(stdout, "[THREAD] Solution found! %lx\n", solution);
-    fprintf(stderr, "[THREAD] Worker %d finished processing\n", thread_id);
-    fprintf(stderr, "[THREAD] Worker %d exiting\n", thread_id);
+    fprintf(stdout, "[THREAD] Solution found!\n");
+    char* result = malloc(sizeof(char));
+    char print_seed[65];
+    memcpy(print_seed, raw_seed, 64);
+    print_seed[64] = '\0';
+    sprintf(result, "SOLN %x %s %lx\r\n", difficulty, print_seed, solution);
+    fprintf(stdout, "[THREAD] Sending!\n");
+    send_message(newsockfd, result, 97);
 
+    fprintf(stderr, "[THREAD] Worker %d exiting\n", thread_id);
     pthread_cleanup_pop(0);
     // do shit
 }
@@ -285,8 +291,7 @@ void *work_btch(void *btch_arg) {
             *solution = trying;
             pthread_mutex_lock(mutex);
         } else {
-            fprintf(stderr, "[WORKBTCH] Attempted.. Retrying in 1 second\n");
-            sleep(1);
+            //fprintf(stderr, "[WORKBTCH] Attempted.. Retrying in 1 second\n");
         }
     }
 }
