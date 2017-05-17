@@ -158,8 +158,23 @@ void *handler_wrapper(void *wrapper_arg) {
     return 0;
 }
 
+void work_handler_cleanup(void* ptr_btches) {
+    pthread_t *btches = (pthread_t*) ptr_btches;
+    fprintf(stderr, "[THREAD] Cleanup\n");
+
+    for(int i = 0; i < WORKER_COUNT; i++) {
+        if(btches[i] != 0) {
+            pthread_cancel(btches[i]);
+            fprintf(stderr, "[THREAD] Killed workbtch %d\n", i);
+        }
+    }
+
+    fprintf(stderr, "[THREAD] Finish cleanup\n");
+}
+
 void work_handler(worker_arg_t *arg) {
     int thread_id = arg->thread_id;
+    int *newsockfd = arg->newsockfd;
     char *command_str = arg->command_str;
     queue_t **tid_queue = arg->work_queue;
     pthread_mutex_t *queue_mutex = arg->queue_mutex;
@@ -170,13 +185,66 @@ void work_handler(worker_arg_t *arg) {
     }
 
     fprintf(stderr, "[THREAD] Worker %d is now processing %s\n", thread_id, command_str);
-    sleep(3);
+
+    uint32_t difficulty;
+    uint64_t n;
+    char raw_seed[64];
+    int thread_count;
+
+    sscanf(command_str + 5, "%x %s %lx %x", &difficulty, raw_seed, &n, &thread_count);
+    /*
+    fprintf(stderr, "diff:%x sol:%lx cnt:%x\n", difficulty, n, thread_count);
+    fprintf(stderr, "seed:");
+    for(int i = 0; i < 64; i++)
+        fprintf(stderr, "%c", raw_seed[i]);
+    fprintf(stderr, "\n");
+    */
+    // n = ntohl(n);
+    difficulty = ntohl(difficulty);
+
+    uint64_t solution = 0;
+
+    BYTE *target = get_target(difficulty);
+    BYTE *seed = seed_from_raw(raw_seed);
+
+    pthread_mutex_t sol_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_t btches[WORKER_COUNT];
+    btch_arg_t btch_args[WORKER_COUNT];
+
+    pthread_cleanup_push(work_handler_cleanup, (void*) btches);
+    for(int i = 0; i < thread_count; i++) {
+        btch_args[i].solution = &solution;
+        btch_args[i].n = &n;
+        btch_args[i].target = target;
+        btch_args[i].seed = seed;
+        btch_args[i].sol_mutex = &sol_mutex;
+
+        if((pthread_create(btches + i, NULL, work_btch, (void*)(btch_args + i))) < 0) {
+            perror("ERROR creating thread");
+        }
+        fprintf(stdout, "[THREAD] Workerbtch made %lu\n", btches[i]);
+    }
+
+    while(solution == 0) {
+        fprintf(stdout, "[THREAD] Waiting for solution..\n");
+        sleep(1);
+    }
+
+    fprintf(stdout, "[THREAD] Solution found! %lx\n", solution);
     fprintf(stderr, "[THREAD] Worker %d finished processing\n", thread_id);
     fprintf(stdout, "[THREAD] Finished working %s\n", command_str);
 
     rm_tid(tid_queue, queue_mutex);
+    pthread_cleanup_pop(0);
     fprintf(stderr, "[THREAD] Worker %d exiting\n", thread_id);
     // do shit
+}
+
+void *work_btch(void *btch_arg) {
+    btch_arg_t *arg = (btch_arg_t*) btch_arg;
+    while(1) {
+        sleep(1);
+    }
 }
 
 void abrt_handler(worker_arg_t *arg) {

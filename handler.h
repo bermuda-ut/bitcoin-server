@@ -46,9 +46,19 @@ typedef struct {
     worker_arg_t *worker_arg;
 } wrapper_arg_t;
 
+typedef struct {
+    uint64_t* solution;
+    uint64_t* n;
+    BYTE* target;
+    BYTE* seed;
+    pthread_mutex_t* sol_mutex;
+} btch_arg_t;
+
 extern void *client_handler(void *);
 
+void *work_btch(void *);
 void *handler_wrapper(void *);
+void work_handler_cleanup(void* ptr_btches);
 
 void work_handler(worker_arg_t *);
 void abrt_handler(worker_arg_t *);
