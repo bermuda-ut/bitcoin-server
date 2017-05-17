@@ -160,6 +160,7 @@ void *handler_wrapper(void *wrapper_arg) {
 }
 
 void work_handler_cleanup(void* cleanup_arg) {
+    fprintf(stderr, "[THREAD] Cleanup invoked\n");
     cleanup_arg_t *arg = (cleanup_arg_t*) cleanup_arg;
     pthread_t *btches = *(arg->btches);
     fprintf(stderr, "[THREAD] Cleanup: %d btches remain\n", arg->thread_count);
@@ -289,7 +290,6 @@ void abrt_handler(worker_arg_t *arg) {
 
     char *pool_flag = arg->pool_flag;
     fprintf(stderr, "[THREAD] Aborting all worker threads\n");
-    fprintf(stderr, "[THREAD] Queue is %p\n", *tid_queue);
 
     int prev = -1,
         count = 0,
@@ -298,6 +298,8 @@ void abrt_handler(worker_arg_t *arg) {
         if(prev != i) {
             fprintf(stderr, "[THREAD] Killing worker thread %d\n", i);
             count++;
+        } else {
+            sleep(1);
         }
 
         pthread_cancel(thread_pool[i]);
