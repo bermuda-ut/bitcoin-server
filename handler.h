@@ -55,7 +55,7 @@ typedef struct {
 } btch_arg_t;
 
 typedef struct {
-    pthread_t *btches;
+    pthread_t **btches;
     int thread_count;
     int thread_id;
 

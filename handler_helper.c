@@ -169,7 +169,7 @@ BYTE *seed_from_raw(char* raw_seed) {
 }
 
 BYTE *get_x(BYTE* seed, uint64_t solution) {
-    fprintf(stderr, "[THREAD] Parsing x with solution %lu %lx\n", solution, solution);
+    //fprintf(stderr, "[THREAD] Parsing x with solution %lu %lx\n", solution, solution);
 
     BYTE *x = malloc(sizeof(BYTE) * 40);
     uint64_t tmp = ntohl(solution);
@@ -188,14 +188,14 @@ BYTE *get_x(BYTE* seed, uint64_t solution) {
         memcpy(x+32, &solution, 8);
     }
     
-    fprintf(stderr, "[THREAD] x: ");
-    byte_print(stderr, x, 40);
+    //fprintf(stderr, "[THREAD] x: ");
+    //byte_print(stderr, x, 40);
 
     return x;
 }
 
 int is_valid_soln(BYTE *target, BYTE* seed, uint64_t solution) {
-    fprintf(stderr, "[THREAD] checking if cat is valid\n");
+    //fprintf(stderr, "[THREAD] checking if cat is valid\n");
 
     BYTE *x = get_x(seed, solution);
 	BYTE buf[SHA256_BLOCK_SIZE];
@@ -210,11 +210,11 @@ int is_valid_soln(BYTE *target, BYTE* seed, uint64_t solution) {
 	sha256_update(&ctx, buf, SHA256_BLOCK_SIZE);
 	sha256_final(&ctx, buf);
 
-    fprintf(stderr, "[THREAD] y: ");
-    byte_print(stderr, buf, 32);
+    //fprintf(stderr, "[THREAD] y: ");
+    //byte_print(stderr, buf, 32);
 
-    fprintf(stderr, "[THREAD] t: ");
-    byte_print(stderr, target, 32);
+    //fprintf(stderr, "[THREAD] t: ");
+    //byte_print(stderr, target, 32);
 
     return sha256_compare(buf, target);
 }

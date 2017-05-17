@@ -142,6 +142,7 @@ void *client_handler(void *thread_arg) {
             pthread_cancel(thread_pool[i]);
     }
 
+    fprintf(stderr, "[THREAD] Client thread dying\n");
     return 0;
 }
 
@@ -160,16 +161,18 @@ void *handler_wrapper(void *wrapper_arg) {
 
 void work_handler_cleanup(void* cleanup_arg) {
     cleanup_arg_t *arg = (cleanup_arg_t*) cleanup_arg;
-    pthread_t *btches = (pthread_t*) arg->btches;
-    fprintf(stderr, "[THREAD] Cleanup\n");
+    pthread_t *btches = *(arg->btches);
+    fprintf(stderr, "[THREAD] Cleanup: %d btches remain\n", arg->thread_count);
 
-    if(btches)
+    if(btches) {
         for(int i = 0; i < arg->thread_count; i++) {
             if(btches[i] != 0) {
                 pthread_cancel(btches[i]);
-                fprintf(stderr, "[THREAD] Killed workbtch %d\n", i);
+                fprintf(stderr, "[THREAD] Killed workbtch %lu\n", btches[i]);
             }
         }
+        free(btches);
+    }
 
     queue_t **tid_queue = arg->tid_queue;
     pthread_mutex_t *mutex = arg->queue_mutex;
@@ -219,9 +222,9 @@ void work_handler(worker_arg_t *arg) {
     BYTE *seed = seed_from_raw(raw_seed);
     pthread_mutex_t sol_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-    pthread_t btches[thread_count];
+    pthread_t *btches = malloc(sizeof(pthread_t) * thread_count);
     btch_arg_t btch_args[thread_count];
-    cleanup_arg.btches = btches;
+    cleanup_arg.btches = &btches;
     cleanup_arg.thread_count = thread_count;
 
     for(int i = 0; i < thread_count; i++) {
@@ -244,7 +247,6 @@ void work_handler(worker_arg_t *arg) {
 
     fprintf(stdout, "[THREAD] Solution found! %lx\n", solution);
     fprintf(stderr, "[THREAD] Worker %d finished processing\n", thread_id);
-    fprintf(stdout, "[THREAD] Finished working %s\n", command_str);
     fprintf(stderr, "[THREAD] Worker %d exiting\n", thread_id);
 
     pthread_cleanup_pop(0);
@@ -269,10 +271,12 @@ void *work_btch(void *btch_arg) {
 
         int res;
         if((res = is_valid_soln(target, seed, trying)) == -1) {
-            fprintf(stderr, "[THREAD] Solution found %lu\n", trying);
+            fprintf(stderr, "[WORKBTCH] Solution found %lu\n", trying);
             *solution = trying;
+            pthread_mutex_lock(mutex);
         } else {
-            fprintf(stderr, "[THREAD] Solution result %d\n", res);
+            fprintf(stderr, "[WORKBTCH] Attempted.. Retrying in 1 second\n");
+            sleep(1);
         }
     }
 }
