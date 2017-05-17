@@ -33,7 +33,7 @@ void *client_handler(void *thread_arg) {
 
     // client thread init
     char *thread_avail_flags = init_avail_flags(CLIENT_THREAD_COUNT);
-    pthread_t thread_pool[CLIENT_THREAD_COUNT];
+    pthread_t *thread_pool = malloc(sizeof(pthread_t) * CLIENT_THREAD_COUNT);
 
     queue_t* work_queue = NULL;
     pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -138,8 +138,10 @@ void *client_handler(void *thread_arg) {
 
     // cancel any working threads
     for(int i = 0; i < CLIENT_THREAD_COUNT; i++) {
-        if(thread_avail_flags[i] == 1)
+        if(thread_avail_flags[i] == 1) {
             pthread_cancel(thread_pool[i]);
+            pthread_join(thread_pool[i], 0);
+        }
     }
 
     fprintf(stderr, "[THREAD] Client thread dying\n");
@@ -160,7 +162,6 @@ void *handler_wrapper(void *wrapper_arg) {
 }
 
 void work_handler_cleanup(void* cleanup_arg) {
-    fprintf(stderr, "[THREAD] Cleanup invoked\n");
     cleanup_arg_t *arg = (cleanup_arg_t*) cleanup_arg;
     pthread_t *btches = *(arg->btches);
     fprintf(stderr, "[THREAD] Cleanup: %d btches remain\n", arg->thread_count);
@@ -169,6 +170,7 @@ void work_handler_cleanup(void* cleanup_arg) {
         for(int i = 0; i < arg->thread_count; i++) {
             if(btches[i] != 0) {
                 pthread_cancel(btches[i]);
+                pthread_join(btches[i], 0);
                 fprintf(stderr, "[THREAD] Killed workbtch %lu\n", btches[i]);
             }
         }
@@ -179,11 +181,16 @@ void work_handler_cleanup(void* cleanup_arg) {
     pthread_mutex_t *mutex = arg->queue_mutex;
     int thread_id = arg->thread_id;
 
+    fprintf(stderr, "[THREAD] tid cleanup, thread is %d\n", thread_id);
     while(get_tid(tid_queue, mutex) != thread_id) {
+        fprintf(stderr, "not found retrying\n");
         sleep(1);
     }
-    rm_tid(tid_queue, mutex);
+
+    free(cleanup_arg);
     fprintf(stderr, "[THREAD] Finish cleanup\n");
+
+    rm_tid(tid_queue, mutex);
 }
 
 void work_handler(worker_arg_t *arg) {
@@ -193,13 +200,13 @@ void work_handler(worker_arg_t *arg) {
     queue_t **tid_queue = arg->work_queue;
     pthread_mutex_t *queue_mutex = arg->queue_mutex;
 
-    cleanup_arg_t cleanup_arg;
-    cleanup_arg.tid_queue = tid_queue;
-    cleanup_arg.thread_id = thread_id;
-    cleanup_arg.queue_mutex = queue_mutex;
-    cleanup_arg.btches = NULL;
-    cleanup_arg.thread_count = 0;
-    pthread_cleanup_push(work_handler_cleanup, (void*)&cleanup_arg);
+    cleanup_arg_t *cleanup_arg = malloc(sizeof(cleanup_arg_t));
+    cleanup_arg->tid_queue = tid_queue;
+    cleanup_arg->thread_id = thread_id;
+    cleanup_arg->queue_mutex = queue_mutex;
+    cleanup_arg->btches = NULL;
+    cleanup_arg->thread_count = 0;
+    pthread_cleanup_push(work_handler_cleanup, (void*)cleanup_arg);
 
     while(get_tid(tid_queue, queue_mutex) != thread_id) {
         fprintf(stderr, "[THREAD] Worker %d is waiting for its turn\n", thread_id);
@@ -225,8 +232,8 @@ void work_handler(worker_arg_t *arg) {
 
     pthread_t *btches = malloc(sizeof(pthread_t) * thread_count);
     btch_arg_t btch_args[thread_count];
-    cleanup_arg.btches = &btches;
-    cleanup_arg.thread_count = thread_count;
+    cleanup_arg->btches = &btches;
+    cleanup_arg->thread_count = thread_count;
 
     for(int i = 0; i < thread_count; i++) {
         btch_args[i].solution = &solution;
