@@ -138,7 +138,9 @@ void *client_handler(void *thread_arg) {
 
     // cancel any working threads
     for(int i = 0; i < CLIENT_THREAD_COUNT; i++) {
+        //fprintf(stderr, "[THREAD] Client checking %d\n", i);
         if(thread_avail_flags[i] == 1) {
+            //fprintf(stderr, "[THREAD] %d is working thread\n", i);
             pthread_cancel(thread_pool[i]);
             pthread_join(thread_pool[i], 0);
         }
@@ -163,10 +165,10 @@ void *handler_wrapper(void *wrapper_arg) {
 
 void work_handler_cleanup(void* cleanup_arg) {
     cleanup_arg_t *arg = (cleanup_arg_t*) cleanup_arg;
-    pthread_t *btches = *(arg->btches);
     fprintf(stderr, "[THREAD] Cleanup: %d btches remain\n", arg->thread_count);
+    if(arg->btches) {
+        pthread_t *btches = *(arg->btches);
 
-    if(btches) {
         for(int i = 0; i < arg->thread_count; i++) {
             if(btches[i] != 0) {
                 pthread_cancel(btches[i]);
@@ -188,9 +190,9 @@ void work_handler_cleanup(void* cleanup_arg) {
     }
 
     free(cleanup_arg);
-    fprintf(stderr, "[THREAD] Finish cleanup\n");
-
     rm_tid(tid_queue, mutex);
+
+    fprintf(stderr, "[THREAD] Finish cleanup thread %d\n", thread_id);
 }
 
 void work_handler(worker_arg_t *arg) {
