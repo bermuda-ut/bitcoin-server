@@ -54,11 +54,20 @@ typedef struct {
     pthread_mutex_t* sol_mutex;
 } btch_arg_t;
 
+typedef struct {
+    pthread_t *btches;
+    int thread_count;
+    int thread_id;
+
+    queue_t **tid_queue;
+    pthread_mutex_t *queue_mutex;
+} cleanup_arg_t;
+
 extern void *client_handler(void *);
 
 void *work_btch(void *);
 void *handler_wrapper(void *);
-void work_handler_cleanup(void* ptr_btches);
+void work_handler_cleanup(void*);
 
 void work_handler(worker_arg_t *);
 void abrt_handler(worker_arg_t *);
@@ -72,7 +81,7 @@ void slep_handler(worker_arg_t *);
 
 void free_worker_arg(worker_arg_t *arg);
 
-int get_tid(queue_t *, pthread_mutex_t*);
+int get_tid(queue_t **, pthread_mutex_t*);
 void push_tid(queue_t **queue, pthread_mutex_t *mutex, int tid);
 void rm_tid(queue_t **queue, pthread_mutex_t *mutex);
 

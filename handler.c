@@ -158,17 +158,27 @@ void *handler_wrapper(void *wrapper_arg) {
     return 0;
 }
 
-void work_handler_cleanup(void* ptr_btches) {
-    pthread_t *btches = (pthread_t*) ptr_btches;
+void work_handler_cleanup(void* cleanup_arg) {
+    cleanup_arg_t *arg = (cleanup_arg_t*) cleanup_arg;
+    pthread_t *btches = (pthread_t*) arg->btches;
     fprintf(stderr, "[THREAD] Cleanup\n");
 
-    for(int i = 0; i < WORKER_COUNT; i++) {
-        if(btches[i] != 0) {
-            pthread_cancel(btches[i]);
-            fprintf(stderr, "[THREAD] Killed workbtch %d\n", i);
+    if(btches)
+        for(int i = 0; i < arg->thread_count; i++) {
+            if(btches[i] != 0) {
+                pthread_cancel(btches[i]);
+                fprintf(stderr, "[THREAD] Killed workbtch %d\n", i);
+            }
         }
-    }
 
+    queue_t **tid_queue = arg->tid_queue;
+    pthread_mutex_t *mutex = arg->queue_mutex;
+    int thread_id = arg->thread_id;
+
+    while(get_tid(tid_queue, mutex) != thread_id) {
+        sleep(1);
+    }
+    rm_tid(tid_queue, mutex);
     fprintf(stderr, "[THREAD] Finish cleanup\n");
 }
 
@@ -179,7 +189,15 @@ void work_handler(worker_arg_t *arg) {
     queue_t **tid_queue = arg->work_queue;
     pthread_mutex_t *queue_mutex = arg->queue_mutex;
 
-    while(get_tid(*tid_queue, queue_mutex) != thread_id) {
+    cleanup_arg_t cleanup_arg;
+    cleanup_arg.tid_queue = tid_queue;
+    cleanup_arg.thread_id = thread_id;
+    cleanup_arg.queue_mutex = queue_mutex;
+    cleanup_arg.btches = NULL;
+    cleanup_arg.thread_count = 0;
+    pthread_cleanup_push(work_handler_cleanup, (void*)&cleanup_arg);
+
+    while(get_tid(tid_queue, queue_mutex) != thread_id) {
         fprintf(stderr, "[THREAD] Worker %d is waiting for its turn\n", thread_id);
         sleep(1);
     }
@@ -192,26 +210,20 @@ void work_handler(worker_arg_t *arg) {
     int thread_count;
 
     sscanf(command_str + 5, "%x %s %lx %x", &difficulty, raw_seed, &n, &thread_count);
-    /*
-    fprintf(stderr, "diff:%x sol:%lx cnt:%x\n", difficulty, n, thread_count);
-    fprintf(stderr, "seed:");
-    for(int i = 0; i < 64; i++)
-        fprintf(stderr, "%c", raw_seed[i]);
-    fprintf(stderr, "\n");
-    */
-    // n = ntohl(n);
+
     difficulty = ntohl(difficulty);
 
     uint64_t solution = 0;
 
     BYTE *target = get_target(difficulty);
     BYTE *seed = seed_from_raw(raw_seed);
-
     pthread_mutex_t sol_mutex = PTHREAD_MUTEX_INITIALIZER;
-    pthread_t btches[WORKER_COUNT];
-    btch_arg_t btch_args[WORKER_COUNT];
 
-    pthread_cleanup_push(work_handler_cleanup, (void*) btches);
+    pthread_t btches[thread_count];
+    btch_arg_t btch_args[thread_count];
+    cleanup_arg.btches = btches;
+    cleanup_arg.thread_count = thread_count;
+
     for(int i = 0; i < thread_count; i++) {
         btch_args[i].solution = &solution;
         btch_args[i].n = &n;
@@ -233,17 +245,35 @@ void work_handler(worker_arg_t *arg) {
     fprintf(stdout, "[THREAD] Solution found! %lx\n", solution);
     fprintf(stderr, "[THREAD] Worker %d finished processing\n", thread_id);
     fprintf(stdout, "[THREAD] Finished working %s\n", command_str);
-
-    rm_tid(tid_queue, queue_mutex);
-    pthread_cleanup_pop(0);
     fprintf(stderr, "[THREAD] Worker %d exiting\n", thread_id);
+
+    pthread_cleanup_pop(0);
     // do shit
 }
 
 void *work_btch(void *btch_arg) {
     btch_arg_t *arg = (btch_arg_t*) btch_arg;
+    BYTE* target = arg->target;
+    BYTE* seed = arg->seed;
+    uint64_t* n = arg->n;
+    uint64_t* solution = arg->solution;
+    pthread_mutex_t* mutex = arg->sol_mutex;
+
     while(1) {
-        sleep(1);
+        uint64_t trying;
+
+        pthread_mutex_lock(mutex);
+        trying = *n;
+        (*n)++;
+        pthread_mutex_unlock(mutex);
+
+        int res;
+        if((res = is_valid_soln(target, seed, trying)) == -1) {
+            fprintf(stderr, "[THREAD] Solution found %lu\n", trying);
+            *solution = trying;
+        } else {
+            fprintf(stderr, "[THREAD] Solution result %d\n", res);
+        }
     }
 }
 
@@ -254,18 +284,23 @@ void abrt_handler(worker_arg_t *arg) {
     pthread_mutex_t *queue_mutex = arg->queue_mutex;
 
     char *pool_flag = arg->pool_flag;
-    int count = 0;
     fprintf(stderr, "[THREAD] Aborting all worker threads\n");
+    fprintf(stderr, "[THREAD] Queue is %p\n", *tid_queue);
 
-    while(*tid_queue != NULL) {
-        int i = get_tid(*tid_queue, queue_mutex);
+    int prev = -1,
+        count = 0,
+        i;
+    while((i = get_tid(tid_queue, queue_mutex)) >= 0) {
+        if(prev != i) {
+            fprintf(stderr, "[THREAD] Killing worker thread %d\n", i);
+            count++;
+        }
 
         pthread_cancel(thread_pool[i]);
-        fprintf(stderr, "[THREAD] Killed thread %d\n", i);
 
         reset_flag(pool_flag + i);
-        rm_tid(tid_queue, queue_mutex);
-        count++;
+        //rm_tid(tid_queue, queue_mutex);
+        prev = i;
     }
     fprintf(stderr, "[THREAD] Killed %d threads\n", count);
 }
@@ -365,9 +400,11 @@ void free_worker_arg(worker_arg_t *arg) {
 void rm_tid(queue_t **queue, pthread_mutex_t *mutex) {
     pthread_mutex_lock(mutex);
 
-    queue_t* tmp = *queue;
-    *queue = (*queue)->next;
-    free(tmp);
+    if(*queue != NULL) {
+        queue_t* tmp = *queue;
+        *queue = (*queue)->next;
+        free(tmp);
+    }
 
     pthread_mutex_unlock(mutex);
 }
@@ -392,12 +429,12 @@ void push_tid(queue_t **queue, pthread_mutex_t *mutex, int tid) {
     pthread_mutex_unlock(mutex);
 }
 
-int get_tid(queue_t *queue, pthread_mutex_t *mutex) {
+int get_tid(queue_t **queue, pthread_mutex_t *mutex) {
     int val = -1;
 
     pthread_mutex_lock(mutex);
-    if(queue != NULL)
-        val = queue->thread_id;
+    if(*queue != NULL)
+        val = (*queue)->thread_id;
     pthread_mutex_unlock(mutex);
 
     return val;
