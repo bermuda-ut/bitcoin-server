@@ -48,6 +48,11 @@ typedef struct queue {
     struct queue *next;
 } queue_t;
 
+typedef struct {
+    queue_t** work_queue;
+    pthread_mutex_t *queue_mutex;
+} work_man_arg_t;
+
 extern void *client_handler(void *);
 
 void *handler_wrapper(void *);
@@ -63,7 +68,13 @@ void slep_handler(worker_arg_t *);
 void *work_manager(void*);
 void *work_btch(void*);
 
-void free_worker_arg(worker_arg_t *arg);
-worker_arg_t* pop_queue(queue_t**);
 
+worker_arg_t* pop_queue(queue_t**);
+int check_working(char* working);
+void add_queue(worker_arg_t*, queue_t**);
+void flag_working(char* working);
+void unflag_working(char* working);
+void free_work_man_arg(work_man_arg_t *arg);
+
+void free_worker_arg(worker_arg_t *arg);
 #endif

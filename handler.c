@@ -35,10 +35,19 @@ void *client_handler(void *thread_arg) {
     char *thread_avail_flags = init_avail_flags(CLIENT_THREAD_COUNT);
     pthread_t thread_pool[CLIENT_THREAD_COUNT];
 
-    // client worker thread init
-    pthread_t worker_thread;
+    // client worker queue init
     queue_t **work_queue = malloc(sizeof(queue_t*)); // TODO: free this
     *work_queue = NULL;
+
+    pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+    // client worker manager
+    pthread_t worker_thread;
+
+    work_man_arg_t *work_man_arg = malloc(sizeof(work_man_arg_t));
+    work_man_arg->work_queue = work_queue;
+    work_man_arg->queue_mutex = &queue_mutex;
+
     if((pthread_create(&worker_thread, NULL, work_manager, (void*)work_queue)) < 0) {
         perror("ERROR creating thread");
     }
@@ -104,8 +113,13 @@ void *client_handler(void *thread_arg) {
             } else if(strcmp("SLEP", cmd) == 0) {
                 wrapper_arg->worker_func = slep_handler;
 
+            } else if(strcmp("ABRT", cmd) == 0) {
+                // restart work mananger
+                continue;
+
             } else if(strcmp("WORK", cmd) == 0) {
                 // there is one thread alread to handle this.
+                add_queue(worker_arg, work_queue);
                 continue;
 
             } else {
@@ -116,6 +130,7 @@ void *client_handler(void *thread_arg) {
             int i;
             while((i = get_avail_thread(thread_avail_flags, CLIENT_COUNT)) == -1) {
                 // this will never happen
+                sleep(1);
             };
             wrapper_arg->flag = thread_avail_flags + i;
 
@@ -135,6 +150,7 @@ void *client_handler(void *thread_arg) {
         if(thread_avail_flags[i] == 1)
             pthread_cancel(thread_pool[i]);
     }
+    pthread_cancel(worker_thread);
 
     return 0;
 }
@@ -152,13 +168,21 @@ void *handler_wrapper(void *wrapper_arg) {
     return 0;
 }
 
-void *work_manager(void* work_queue) {
-    fprintf(stderr, "[WORKER] Dedicated worker created\n");
-    queue_t** queue = (queue_t**) work_queue;
+void *work_manager(void* work_man_arg) {
+    fprintf(stderr, "[WORK MAN] Dedicated worker created\n");
+    work_man_arg_t *arg = (work_man_arg_t*) work_man_arg;
+    queue_t** queue = (queue_t**) arg->work_queue;
+    pthread_mutex_t* queue_mutex = arg->queue_mutex;
+
+    // clean up work btches and free args etc
+    // pthread_cleanup_push();
 
     while(1) {
-        worker_arg_t* arg = NULL;
-        while((arg = pop_queue(queue)) == NULL);
+        worker_arg_t* arg;
+        if((arg = pop_queue(queue)) == NULL) {
+            sleep(1);
+            continue;
+        };
 
         work_btch_arg_t* btch_arg = malloc(sizeof(work_btch_arg_t));
 
@@ -171,7 +195,7 @@ void *work_manager(void* work_queue) {
                  answer = 0;
         char raw_seed[64];
         
-        sscanf(command_str + 5, "%x %s %lx %u", &difficulty, raw_seed, &solution, &worker_count);
+        sscanf(command_str + 5, "%x %s %lx %x", &difficulty, raw_seed, &solution, &worker_count);
         fprintf(stderr, "worker info: %x %lx %u", difficulty, solution, worker_count);
         break;
         difficulty = ntohl(difficulty);
@@ -197,16 +221,16 @@ void *work_manager(void* work_queue) {
         // cleanup
     }
 
+    // should never reach here
+    free_work_man_arg(arg);
+
+    fprintf(stderr, "[WORK MAN] Dedicated worker exit\n");
     return 0;
 }
 
 void *work_btch(void* btch_arg) {
     work_btch_arg_t *arg = btch_arg;
     return 0;
-}
-
-worker_arg_t* pop_queue(queue_t** queue) {
-    return NULL;
 }
 
 void soln_handler(worker_arg_t *arg) {
@@ -299,4 +323,16 @@ void slep_handler(worker_arg_t *arg) {
 
 void free_worker_arg(worker_arg_t *arg) {
     free(arg);
+}
+
+void add_queue(worker_arg_t* arg, queue_t** queue) {
+
+}
+
+worker_arg_t* pop_queue(queue_t** queue) {
+    return NULL;
+}
+
+void free_work_man_arg(work_man_arg_t *arg) {
+
 }

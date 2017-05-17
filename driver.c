@@ -53,6 +53,7 @@ int main(int argc, char **argv) {
                 warned = 1;
                 fprintf(stderr, "[SERVER] Maximum client capacity reached. Waiting for someone to disconnect.\n");
             }
+            sleep(1);
         };
 
         if(warned) {
