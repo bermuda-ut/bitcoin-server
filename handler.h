@@ -49,6 +49,8 @@ typedef struct {
 typedef struct {
     uint64_t* solution;
     uint64_t* n;
+    int *cancelled;
+
     BYTE* target;
     BYTE* seed;
     pthread_mutex_t* sol_mutex;
@@ -58,6 +60,7 @@ typedef struct {
     pthread_t **btches;
     int thread_count;
     int thread_id;
+    int *cancelled;
 
     queue_t **tid_queue;
     pthread_mutex_t *queue_mutex;

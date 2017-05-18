@@ -16,7 +16,10 @@
 #define SHA256_BLOCK_SIZE 32            // SHA256 outputs a 32 byte digest
 
 /**************************** DATA TYPES ****************************/
+#ifndef DEF_BYTE
+#define DEF_BYTE
 typedef unsigned char BYTE;             // 8-bit byte
+#endif
 typedef unsigned int  WORD;             // 32-bit word, change to "long" for 16-bit machines
 
 typedef struct {

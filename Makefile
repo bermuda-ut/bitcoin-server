@@ -11,8 +11,8 @@ CC = gcc
 CFLAGS = -Wall -Wextra -std=gnu99
 
 LIB = -lm -pthread
-HDR = driver.h netsock.h handler.h handler_helper.h threads.h crypto/sha256.h
-SRC = driver.c netsock.c handler.c handler_helper.c threads.c crypto/sha256.c
+HDR = driver.h netsock.h handler.h handler_helper.h threads.h sha256.h
+SRC = driver.c netsock.c handler.c handler_helper.c threads.c sha256.c
 OBJ = $(SRC:.c=.o)
 
 EXE = server

@@ -1,5 +1,5 @@
 #include "handler_helper.h"
-#include "crypto/sha256.h"
+#include "sha256.h"
 #include <string.h>
 #include <unistd.h>
 

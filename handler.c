@@ -165,6 +165,8 @@ void *handler_wrapper(void *wrapper_arg) {
 
 void work_handler_cleanup(void* cleanup_arg) {
     cleanup_arg_t *arg = (cleanup_arg_t*) cleanup_arg;
+    *(arg->cancelled) = 1;
+
     fprintf(stderr, "[THREAD] Cleanup: %d btches remain\n", arg->thread_count);
     if(arg->btches) {
         pthread_t *btches = *(arg->btches);
@@ -196,6 +198,7 @@ void work_handler_cleanup(void* cleanup_arg) {
 }
 
 void work_handler(worker_arg_t *arg) {
+    int cancelled = 0;
     int thread_id = arg->thread_id;
     int *newsockfd = arg->newsockfd;
     char *command_str = arg->command_str;
@@ -206,6 +209,7 @@ void work_handler(worker_arg_t *arg) {
     cleanup_arg->tid_queue = tid_queue;
     cleanup_arg->thread_id = thread_id;
     cleanup_arg->queue_mutex = queue_mutex;
+    cleanup_arg->cancelled = &cancelled;
     cleanup_arg->btches = NULL;
     cleanup_arg->thread_count = 0;
     pthread_cleanup_push(work_handler_cleanup, (void*)cleanup_arg);
@@ -242,6 +246,7 @@ void work_handler(worker_arg_t *arg) {
         btch_args[i].n = &n;
         btch_args[i].target = target;
         btch_args[i].seed = seed;
+        btch_args[i].cancelled = &cancelled;
         btch_args[i].sol_mutex = &sol_mutex;
 
         if((pthread_create(btches + i, NULL, work_btch, (void*)(btch_args + i))) < 0) {
@@ -259,7 +264,8 @@ void work_handler(worker_arg_t *arg) {
     char* result = malloc(sizeof(char));
     char print_seed[65];
     memcpy(print_seed, raw_seed, 64);
-    print_seed[64] = '\0';
+    print_seed[65] = '\0';
+    difficulty = htonl(difficulty);
     sprintf(result, "SOLN %x %s %lx\r\n", difficulty, print_seed, solution);
     fprintf(stdout, "[THREAD] Sending!\n");
     send_message(newsockfd, result, 97);
@@ -276,6 +282,7 @@ void *work_btch(void *btch_arg) {
     uint64_t* n = arg->n;
     uint64_t* solution = arg->solution;
     pthread_mutex_t* mutex = arg->sol_mutex;
+    int *cancelled = arg->cancelled;
 
     while(1) {
         uint64_t trying;
@@ -290,10 +297,15 @@ void *work_btch(void *btch_arg) {
             fprintf(stderr, "[WORKBTCH] Solution found %lu\n", trying);
             *solution = trying;
             pthread_mutex_lock(mutex);
-        } else {
+        //} else {
             //fprintf(stderr, "[WORKBTCH] Attempted.. Retrying in 1 second\n");
         }
+
+        if(*cancelled)
+            break;
     }
+
+    return 0;
 }
 
 void abrt_handler(worker_arg_t *arg) {
@@ -303,7 +315,7 @@ void abrt_handler(worker_arg_t *arg) {
     pthread_mutex_t *queue_mutex = arg->queue_mutex;
 
     char *pool_flag = arg->pool_flag;
-    fprintf(stderr, "[THREAD] Aborting all worker threads\n");
+    fprintf(stderr, "[THREAD] Aborting all worker threads in queue %p\n", *tid_queue);
 
     int prev = -1,
         count = 0,
@@ -311,14 +323,14 @@ void abrt_handler(worker_arg_t *arg) {
     while((i = get_tid(tid_queue, queue_mutex)) >= 0) {
         if(prev != i) {
             fprintf(stderr, "[THREAD] Killing worker thread %d\n", i);
+
+            pthread_cancel(thread_pool[i]);
+            reset_flag(pool_flag + i);
+
             count++;
         } else {
             sleep(1);
         }
-
-        pthread_cancel(thread_pool[i]);
-
-        reset_flag(pool_flag + i);
         //rm_tid(tid_queue, queue_mutex);
         prev = i;
     }
