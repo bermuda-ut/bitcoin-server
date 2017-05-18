@@ -165,9 +165,10 @@ void *handler_wrapper(void *wrapper_arg) {
 
 void work_handler_cleanup(void* cleanup_arg) {
     cleanup_arg_t *arg = (cleanup_arg_t*) cleanup_arg;
-    *(arg->cancelled) = 1;
-
     fprintf(stderr, "[THREAD] Cleanup: %d btches remain\n", arg->thread_count);
+
+    *(arg->cancelled) = 1;
+    /*
     if(arg->btches) {
         pthread_t *btches = *(arg->btches);
 
@@ -178,8 +179,8 @@ void work_handler_cleanup(void* cleanup_arg) {
                 fprintf(stderr, "[THREAD] Killed workbtch %lu\n", btches[i]);
             }
         }
-        free(btches);
     }
+    */
 
     queue_t **tid_queue = arg->tid_queue;
     pthread_mutex_t *mutex = arg->queue_mutex;
@@ -187,11 +188,10 @@ void work_handler_cleanup(void* cleanup_arg) {
 
     fprintf(stderr, "[THREAD] tid cleanup, thread is %d\n", thread_id);
     while(get_tid(tid_queue, mutex) != thread_id) {
-        fprintf(stderr, "not found retrying\n");
+        fprintf(stderr, "Waiting for current pid \n");
         sleep(1);
     }
 
-    free(cleanup_arg);
     rm_tid(tid_queue, mutex);
 
     fprintf(stderr, "[THREAD] Finish cleanup thread %d\n", thread_id);
@@ -205,17 +205,18 @@ void work_handler(worker_arg_t *arg) {
     queue_t **tid_queue = arg->work_queue;
     pthread_mutex_t *queue_mutex = arg->queue_mutex;
 
-    cleanup_arg_t *cleanup_arg = malloc(sizeof(cleanup_arg_t));
-    cleanup_arg->tid_queue = tid_queue;
-    cleanup_arg->thread_id = thread_id;
-    cleanup_arg->queue_mutex = queue_mutex;
-    cleanup_arg->cancelled = &cancelled;
-    cleanup_arg->btches = NULL;
-    cleanup_arg->thread_count = 0;
-    pthread_cleanup_push(work_handler_cleanup, (void*)cleanup_arg);
+    cleanup_arg_t cleanup_arg;
+    cleanup_arg.tid_queue = tid_queue;
+    cleanup_arg.thread_id = thread_id;
+    cleanup_arg.queue_mutex = queue_mutex;
+    cleanup_arg.cancelled = &cancelled;
+    cleanup_arg.btches = NULL;
+    cleanup_arg.thread_count = 0;
+    pthread_cleanup_push(work_handler_cleanup, (void*)&cleanup_arg);
 
-    while(get_tid(tid_queue, queue_mutex) != thread_id) {
-        fprintf(stderr, "[THREAD] Worker %d is waiting for its turn\n", thread_id);
+    int curr;
+    while((curr = get_tid(tid_queue, queue_mutex)) != thread_id) {
+        fprintf(stderr, "[THREAD] Worker %d is waiting for its turn, current is %d\n", thread_id, curr);
         sleep(1);
     }
 
@@ -227,19 +228,19 @@ void work_handler(worker_arg_t *arg) {
     int thread_count;
 
     sscanf(command_str + 5, "%x %s %lx %x", &difficulty, raw_seed, &n, &thread_count);
-
     difficulty = ntohl(difficulty);
+    if(thread_count > WORKER_COUNT_MAX)
+        thread_count = WORKER_COUNT_MAX;
 
     uint64_t solution = 0;
-
     BYTE *target = get_target(difficulty);
     BYTE *seed = seed_from_raw(raw_seed);
     pthread_mutex_t sol_mutex = PTHREAD_MUTEX_INITIALIZER;
 
     pthread_t *btches = malloc(sizeof(pthread_t) * thread_count);
     btch_arg_t btch_args[thread_count];
-    cleanup_arg->btches = &btches;
-    cleanup_arg->thread_count = thread_count;
+    cleanup_arg.btches = &btches;
+    cleanup_arg.thread_count = thread_count;
 
     for(int i = 0; i < thread_count; i++) {
         btch_args[i].solution = &solution;
@@ -248,6 +249,7 @@ void work_handler(worker_arg_t *arg) {
         btch_args[i].seed = seed;
         btch_args[i].cancelled = &cancelled;
         btch_args[i].sol_mutex = &sol_mutex;
+        btch_args[i].btch_id = i;
 
         if((pthread_create(btches + i, NULL, work_btch, (void*)(btch_args + i))) < 0) {
             perror("ERROR creating thread");
@@ -270,8 +272,9 @@ void work_handler(worker_arg_t *arg) {
     fprintf(stdout, "[THREAD] Sending!\n");
     send_message(newsockfd, result, 97);
 
+    fprintf(stderr, "[THREAD] Worker %d cleaning up\n", thread_id);
+    pthread_cleanup_pop(1);
     fprintf(stderr, "[THREAD] Worker %d exiting\n", thread_id);
-    pthread_cleanup_pop(0);
     // do shit
 }
 
@@ -305,6 +308,7 @@ void *work_btch(void *btch_arg) {
             break;
     }
 
+    fprintf(stderr, "[WORKBTCH] Work bitch %d is now dying\n", arg->btch_id);
     return 0;
 }
 

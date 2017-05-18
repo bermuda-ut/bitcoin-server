@@ -15,10 +15,10 @@
 #define INIT_CMD_STR_SIZE 128
 
 // maximum number of concurrent threads a client can have
-#define CLIENT_THREAD_COUNT 20
+#define CLIENT_THREAD_COUNT 100
 
-// number of threads used to calculate work for the client
-#define WORKER_COUNT 10
+// maximum number of threads used to calculate work for the client
+#define WORKER_COUNT_MAX 10
 
 #include "handler_helper.h"
 
@@ -50,7 +50,7 @@ typedef struct {
     uint64_t* solution;
     uint64_t* n;
     int *cancelled;
-
+    int btch_id;
     BYTE* target;
     BYTE* seed;
     pthread_mutex_t* sol_mutex;
