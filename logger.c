@@ -33,8 +33,11 @@ void close_logger() {
 }
 
 void logger_log(Sockaddr_in* src, int id, char* str, int len) {
-    time_t rawtime;
+    return;
+    char *cpy = malloc(sizeof(char) * strlen(str));
+    strcpy(cpy, str);
     struct tm *timeinfo;
+    time_t rawtime;
     time(&rawtime);
     timeinfo = localtime(&rawtime);
     //time_str = asctime(timeinfo);
@@ -66,7 +69,7 @@ void logger_log(Sockaddr_in* src, int id, char* str, int len) {
     sprintf(to_write, "[%02d/%02d/%02d %03d:%02d:%02d] %03d@%-15s:%05d %s\n",
             timeinfo->tm_mday, timeinfo->tm_mon + 1, timeinfo->tm_year - 100,
             timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec,
-            id, ip, port, str);
+            id, ip, port, cpy);
 
     fwrite(&to_write, strlen(to_write), 1, _logger_file);
     fflush(_logger_file);

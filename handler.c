@@ -74,20 +74,20 @@ void *client_handler(void *thread_arg) {
                 sleep(1);
             };
 
-            worker_arg_t *worker_arg = malloc(sizeof(worker_arg_t));
-            wrapper_arg_t *wrapper_arg = malloc(sizeof(wrapper_arg_t));
+            worker_arg_t worker_arg;
+            wrapper_arg_t wrapper_arg;
 
-            worker_arg->newsockfd = newsockfd;
-            worker_arg->command_str = cmd;
-            worker_arg->client_id = client_id;
-            worker_arg->work_queue = &work_queue;
-            worker_arg->queue_mutex = &queue_mutex;
-            worker_arg->thread_id = thread_id;
-            worker_arg->thread_pool = thread_pool;
-            worker_arg->pool_flag = thread_avail_flags;
+            worker_arg.newsockfd = newsockfd;
+            worker_arg.client_id = client_id;
+            worker_arg.thread_id = thread_id;
+            worker_arg.pool_flag = thread_avail_flags;
+            worker_arg.work_queue = &work_queue;
+            worker_arg.queue_mutex = &queue_mutex;
+            worker_arg.command_str = cmd;
+            worker_arg.thread_pool = thread_pool;
 
-            wrapper_arg->flag = thread_avail_flags + thread_id;
-            wrapper_arg->worker_arg = worker_arg;
+            wrapper_arg.flag = thread_avail_flags + thread_id;
+            wrapper_arg.worker_arg = &worker_arg;
 
             // so that we can strcmp only first 4 characters :)
             char changed = 0;
@@ -97,32 +97,32 @@ void *client_handler(void *thread_arg) {
             }
 
             if(strcmp("PING", cmd) == 0) {
-                wrapper_arg->worker_func = ping_handler;
+                wrapper_arg.worker_func = ping_handler;
 
             } else if(strcmp("PONG", cmd) == 0) {
-                wrapper_arg->worker_func = pong_handler;
+                wrapper_arg.worker_func = pong_handler;
 
             } else if(strcmp("OKAY", cmd) == 0) {
-                wrapper_arg->worker_func = okay_handler;
+                wrapper_arg.worker_func = okay_handler;
 
             } else if(strcmp("ERRO", cmd) == 0) {
-                wrapper_arg->worker_func = erro_handler;
+                wrapper_arg.worker_func = erro_handler;
 
             } else if(strcmp("SOLN", cmd) == 0) {
-                wrapper_arg->worker_func = soln_handler;
+                wrapper_arg.worker_func = soln_handler;
 
             } else if(strcmp("SLEP", cmd) == 0) {
-                wrapper_arg->worker_func = slep_handler;
+                wrapper_arg.worker_func = slep_handler;
 
             } else if(strcmp("ABRT", cmd) == 0) {
-                wrapper_arg->worker_func = abrt_handler;
+                wrapper_arg.worker_func = abrt_handler;
 
             } else if(strcmp("WORK", cmd) == 0) {
-                wrapper_arg->worker_func = work_handler;
+                wrapper_arg.worker_func = work_handler;
                 push_tid(&work_queue, &queue_mutex, thread_id);
 
             } else {
-                wrapper_arg->worker_func = unkn_handler;
+                wrapper_arg.worker_func = unkn_handler;
             }
 
             // revert back
@@ -131,7 +131,7 @@ void *client_handler(void *thread_arg) {
 
             // wait for a thread to be available
             pthread_t *cmd_thread = thread_pool + thread_id;
-            if((pthread_create(cmd_thread, NULL, handler_wrapper, (void*)wrapper_arg)) < 0) {
+            if((pthread_create(cmd_thread, NULL, handler_wrapper, (void*)&wrapper_arg)) < 0) {
                 perror("ERROR creating thread");
             }
         }
@@ -151,6 +151,9 @@ void *client_handler(void *thread_arg) {
         }
     }
 
+    //free(recv_str_len);
+    //free(recv_used_len);
+    //free(recieved_string);
     fprintf(stderr, "[THREAD] Client thread dying\n");
     return 0;
 }
@@ -163,8 +166,8 @@ void *handler_wrapper(void *wrapper_arg) {
     arg->worker_func(arg->worker_arg);
 
     reset_flag(flag);
-    free_worker_arg(arg->worker_arg);
-    free(wrapper_arg);
+    //free_worker_arg(arg->worker_arg);
+    //free(wrapper_arg);
 
     return 0;
 }
@@ -442,17 +445,13 @@ void slep_handler(worker_arg_t *arg) {
     fprintf(stderr, "[THREAD] Handling SLEP Success\n");
 }
 
-void free_worker_arg(worker_arg_t *arg) {
-    free(arg);
-}
-
 void rm_tid(queue_t **queue, pthread_mutex_t *mutex) {
     pthread_mutex_lock(mutex);
 
     if(*queue != NULL) {
         queue_t* tmp = *queue;
         *queue = (*queue)->next;
-        free(tmp);
+        //free(tmp);
     }
 
     pthread_mutex_unlock(mutex);

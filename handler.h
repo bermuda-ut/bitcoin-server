@@ -5,7 +5,7 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-16 16:58:17
+#   LastChange: 2017-05-19 22:37:00
 #      History:
 =============================================================================*/
 #ifndef HANDLER
@@ -15,7 +15,7 @@
 #define INIT_CMD_STR_SIZE 128
 
 // maximum number of concurrent threads a client can have
-#define CLIENT_THREAD_COUNT 100
+#define CLIENT_THREAD_COUNT 42 // answer to the universe
 
 // maximum number of threads used to calculate work for the client
 #define WORKER_COUNT_MAX 10
@@ -81,8 +81,6 @@ void erro_handler(worker_arg_t *);
 void soln_handler(worker_arg_t *);
 void unkn_handler(worker_arg_t *);
 void slep_handler(worker_arg_t *);
-
-void free_worker_arg(worker_arg_t *arg);
 
 int get_tid(queue_t **, pthread_mutex_t*);
 void push_tid(queue_t **queue, pthread_mutex_t *mutex, int tid);

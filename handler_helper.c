@@ -24,7 +24,7 @@ BYTE *hstob(char *hex_string, size_t size) {
     char* pos = hex_string;
 
     for(size_t count = 0; count < size; count++) {
-        sscanf(pos, "%2hhx", &val[count]);
+        sscanf(pos, "%2hhx", val+count);
         pos += 2;
     }
 
@@ -107,6 +107,11 @@ void send_formatted(int *newsockfd, char* info, char* msg) {
 
 void send_message(int *newsockfd, char* to_send, int len) {
     int n;
+
+    char to_log[len];
+    memcpy(to_log, to_send, len);
+    to_log[len-2] = '\0';
+    logger_log(NULL, 0, to_log, len-2);
 
     if ((n = write(*newsockfd, to_send, len)) <= 0) {
         perror("ERROR writing to socket");

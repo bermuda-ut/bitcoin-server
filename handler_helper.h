@@ -12,6 +12,7 @@
 #define HANDLER_HELPER
 
 #include "uint256.h"
+#include "logger.h"
 #include <arpa/inet.h>
 
 extern BYTE *hstob(char *hex_string, size_t size);
