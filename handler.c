@@ -10,6 +10,7 @@
 #include "handler.h"
 #include "threads.h"
 #include "driver.h"
+#include "logger.h"
 
 void *client_handler(void *thread_arg) {
     thread_arg_t *args = (thread_arg_t*) thread_arg;
@@ -142,7 +143,7 @@ void *client_handler(void *thread_arg) {
         if(thread_avail_flags[i] == 1) {
             //fprintf(stderr, "[THREAD] %d is working thread\n", i);
             pthread_cancel(thread_pool[i]);
-            pthread_join(thread_pool[i], 0);
+            //pthread_join(thread_pool[i], 0);
         }
     }
 
@@ -151,6 +152,7 @@ void *client_handler(void *thread_arg) {
 }
 
 void *handler_wrapper(void *wrapper_arg) {
+    pthread_detach(pthread_self());
     wrapper_arg_t *arg = (wrapper_arg_t*) wrapper_arg;
     char *flag = arg->flag;
 
@@ -268,7 +270,7 @@ void work_handler(worker_arg_t *arg) {
     memcpy(print_seed, raw_seed, 64);
     print_seed[65] = '\0';
     difficulty = htonl(difficulty);
-    sprintf(result, "SOLN %x %s %lx\r\n", difficulty, print_seed, solution);
+    sprintf(result, "SOLN %08x %s %016lx\r\n", difficulty, print_seed, solution);
     fprintf(stdout, "[THREAD] Sending!\n");
     send_message(newsockfd, result, 97);
 
@@ -316,14 +318,20 @@ void abrt_handler(worker_arg_t *arg) {
     // do shit
     queue_t **tid_queue = arg->work_queue;
     pthread_t *thread_pool = arg->thread_pool;
-    pthread_mutex_t *queue_mutex = arg->queue_mutex;
+    //pthread_mutex_t *queue_mutex = arg->queue_mutex;
 
-    char *pool_flag = arg->pool_flag;
+    //char *pool_flag = arg->pool_flag;
     fprintf(stderr, "[THREAD] Aborting all worker threads in queue %p\n", *tid_queue);
 
-    int prev = -1,
-        count = 0,
-        i;
+    int count = 0;
+    queue_t *curr = *tid_queue;
+    while(curr) {
+        pthread_cancel(thread_pool[curr->thread_id]);
+        curr = curr->next;
+        count++;
+    }
+
+    /*
     while((i = get_tid(tid_queue, queue_mutex)) >= 0) {
         if(prev != i) {
             fprintf(stderr, "[THREAD] Killing worker thread %d\n", i);
@@ -338,6 +346,7 @@ void abrt_handler(worker_arg_t *arg) {
         //rm_tid(tid_queue, queue_mutex);
         prev = i;
     }
+    */
     fprintf(stderr, "[THREAD] Killed %d threads\n", count);
 }
 

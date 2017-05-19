@@ -5,16 +5,20 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-09 09:18:33
+#   LastChange: 2017-05-19 01:55:56
 =============================================================================*/
 #include "driver.h"
 #include "netsock.h"
 #include "handler.h"
 #include "threads.h"
+#include "logger.h"
 
 int main(int argc, char **argv) {
+    init_logger();
 	int sockfd, portno;
 	Sockaddr_in serv_addr;
+    //fclose(stderr);
+    //fclose(stdout);
 
 	if (argc < 2) {
 		fprintf(stderr, "ERROR, no port provided\n");
@@ -34,7 +38,6 @@ int main(int argc, char **argv) {
     int count = 0;
 
     while(1) {
-        thread_arg_t *thread_arg = malloc(sizeof(thread_arg_t));
         Sockaddr_in *cli_addr = malloc(sizeof(Sockaddr_in));
         socklen_t clilen = sizeof(*cli_addr);
 
@@ -61,10 +64,13 @@ int main(int argc, char **argv) {
             fprintf(stderr, "[SERVER] Blocked connections now allowed.\n");
         }
 
+        thread_arg_t *thread_arg = malloc(sizeof(thread_arg_t));
         thread_arg->newsockfd = newsockfd;
         thread_arg->flags = thread_avail_flags;
         thread_arg->i = i;
+        thread_arg->addr = cli_addr;
 
+        logger_log(cli_addr, *newsockfd, "connected", 9);
         fprintf(stderr, "[SERVER] Client %d connected, new sock %d\n", i, *newsockfd);
 
         if((pthread_create(thread_pool + i, NULL, client_handler, (void*)thread_arg)) < 0) {
@@ -76,7 +82,8 @@ int main(int argc, char **argv) {
 	
 	/* close socket */
 	close(sockfd);
-	
+    close_logger();
+
 	return 0; 
 }
 

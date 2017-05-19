@@ -11,11 +11,13 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include "driver.h"
+#include "netsock.h"
 
 typedef struct {
     int* newsockfd;
     char* flags;
     int i;
+	Sockaddr_in *addr;
 } thread_arg_t;
 
 extern char *init_avail_flags(int len);
