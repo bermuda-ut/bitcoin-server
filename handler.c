@@ -39,6 +39,7 @@ void *client_handler(void *thread_arg) {
 
     queue_t* work_queue = NULL;
     pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t worker_mutex = PTHREAD_MUTEX_INITIALIZER;
 
     while(1) {
         bzero(buffer, BUFFER_LEN);
@@ -85,6 +86,7 @@ void *client_handler(void *thread_arg) {
             worker_arg.queue_mutex = &queue_mutex;
             worker_arg.command_str = cmd;
             worker_arg.thread_pool = thread_pool;
+            worker_arg.worker_mutex = &worker_mutex;
 
             wrapper_arg.flag = thread_avail_flags + thread_id;
             wrapper_arg.worker_arg = &worker_arg;
@@ -137,8 +139,6 @@ void *client_handler(void *thread_arg) {
         }
     }
 
-    //flags[i] = 0;
-    reset_flag(flags+client_id);
     close(*newsockfd);
 
     // cancel any working threads
@@ -155,20 +155,20 @@ void *client_handler(void *thread_arg) {
     //free(recv_used_len);
     //free(recieved_string);
     fprintf(stderr, "[THREAD] Client thread dying\n");
+    reset_flag(flags+client_id);
     return 0;
 }
 
 void *handler_wrapper(void *wrapper_arg) {
-    pthread_detach(pthread_self());
+    //pthread_detach(pthread_self());
     wrapper_arg_t *arg = (wrapper_arg_t*) wrapper_arg;
     char *flag = arg->flag;
 
     arg->worker_func(arg->worker_arg);
 
     reset_flag(flag);
-    //free_worker_arg(arg->worker_arg);
-    //free(wrapper_arg);
 
+    fprintf(stderr, "[WRAPPER] Wrapper exiting..\n");
     return 0;
 }
 
@@ -228,6 +228,7 @@ void work_handler(worker_arg_t *arg) {
         fprintf(stderr, "[THREAD] Worker %d is waiting for its turn, current is %d\n", thread_id, curr);
         sleep(1);
     }
+    pthread_mutex_lock(arg->worker_mutex);
 
     fprintf(stderr, "[THREAD] Worker %d is now processing %s\n", thread_id, command_str);
 
@@ -272,7 +273,7 @@ void work_handler(worker_arg_t *arg) {
     }
 
     fprintf(stdout, "[THREAD] Solution found!\n");
-    char* result = malloc(sizeof(char));
+    char* result = malloc(sizeof(char) * 98);
     char print_seed[65];
     bzero(print_seed, 65);
     memcpy(print_seed, raw_seed, 64);
@@ -280,6 +281,8 @@ void work_handler(worker_arg_t *arg) {
     sprintf(result, "SOLN %08x %s %016lx\r\n", difficulty, print_seed, solution);
     fprintf(stdout, "[THREAD] Sending!\n");
     send_message(newsockfd, result, 97);
+
+    pthread_mutex_unlock(arg->worker_mutex);
 
     fprintf(stderr, "[THREAD] Worker %d cleaning up\n", thread_id);
     pthread_cleanup_pop(1);
@@ -325,18 +328,20 @@ void abrt_handler(worker_arg_t *arg) {
     // do shit
     queue_t **tid_queue = arg->work_queue;
     pthread_t *thread_pool = arg->thread_pool;
+    char *pool_flag = arg->pool_flag;
     //pthread_mutex_t *queue_mutex = arg->queue_mutex;
 
-    //char *pool_flag = arg->pool_flag;
     fprintf(stderr, "[THREAD] Aborting all worker threads in queue %p\n", *tid_queue);
 
     int count = 0;
     queue_t *curr = *tid_queue;
     while(curr) {
         pthread_cancel(thread_pool[curr->thread_id]);
+        reset_flag(pool_flag + curr->thread_id);
         curr = curr->next;
         count++;
     }
+    pthread_mutex_unlock(arg->worker_mutex);
 
     /*
     while((i = get_tid(tid_queue, queue_mutex)) >= 0) {
@@ -451,7 +456,7 @@ void rm_tid(queue_t **queue, pthread_mutex_t *mutex) {
     if(*queue != NULL) {
         queue_t* tmp = *queue;
         *queue = (*queue)->next;
-        //free(tmp);
+        free(tmp);
     }
 
     pthread_mutex_unlock(mutex);

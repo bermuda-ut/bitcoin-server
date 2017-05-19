@@ -36,6 +36,7 @@ typedef struct {
     // strictly for work and abrt threads only
     queue_t **work_queue;
     pthread_mutex_t *queue_mutex;
+    pthread_mutex_t *worker_mutex;
     pthread_t *thread_pool;
     char* pool_flag;
 } worker_arg_t;

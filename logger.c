@@ -33,7 +33,6 @@ void close_logger() {
 }
 
 void logger_log(Sockaddr_in* src, int id, char* str, int len) {
-    return;
     char *cpy = malloc(sizeof(char) * strlen(str));
     strcpy(cpy, str);
     struct tm *timeinfo;
