@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
 
         int *newsockfd = malloc(sizeof(int));
 
-        fprintf(stderr, "[SERVER] Waiting for client\n");
+        //fprintf(stderr, "[SERVER] Waiting for client\n");
         if ((*newsockfd = accept(sockfd, (Sockaddr*) cli_addr, &clilen)) < 0) {
             perror("ERROR on accept");
             //exit(EXIT_FAILURE);
@@ -55,14 +55,14 @@ int main(int argc, char **argv) {
         while((i = get_avail_thread(thread_avail_flags, CLIENT_COUNT)) == -1) {
             if(!warned) {
                 warned = 1;
-                fprintf(stderr, "[SERVER] Maximum client capacity reached. Waiting for someone to disconnect.\n");
+                //fprintf(stderr, "[SERVER] Maximum client capacity reached. Waiting for someone to disconnect.\n");
             }
             sleep(1);
         };
 
         if(warned) {
             warned = 0;
-            fprintf(stderr, "[SERVER] Blocked connections now allowed.\n");
+            //fprintf(stderr, "[SERVER] Blocked connections now allowed.\n");
         }
 
         thread_arg_t *thread_arg = malloc(sizeof(thread_arg_t));
@@ -72,13 +72,13 @@ int main(int argc, char **argv) {
         thread_arg->addr = cli_addr;
 
         logger_log(cli_addr, *newsockfd, "connected", 9);
-        fprintf(stderr, "[SERVER] Client %d connected, new sock %d\n", i, *newsockfd);
+        //fprintf(stderr, "[SERVER] Client %d connected, new sock %d\n", i, *newsockfd);
 
         if((pthread_create(thread_pool + i, NULL, client_handler, (void*)thread_arg)) < 0) {
             perror("ERROR creating thread");
         }
 
-        fprintf(stdout, "[SERVER] Served %d clients\n", ++count);
+        //fprintf(stdout, "[SERVER] Served %d clients\n", ++count);
     }
 	
 	/* close socket */

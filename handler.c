@@ -31,7 +31,7 @@ void *client_handler(void *thread_arg) {
     *recv_used_len = 0;
     *recieved_string = malloc(sizeof(char) * *recv_str_len);
 
-    fprintf(stderr, "[THREAD %02d] Thread Created for Client %d\n", client_id, client_id);
+    //fprintf(stderr, "[THREAD %02d] Thread Created for Client %d\n", client_id, client_id);
 
     // client thread init
     char *thread_avail_flags = init_avail_flags(CLIENT_THREAD_COUNT);
@@ -44,7 +44,7 @@ void *client_handler(void *thread_arg) {
     while(1) {
         bzero(buffer, BUFFER_LEN);
 
-        fprintf(stderr, "[THREAD %02d] Waiting for client input\n", client_id);
+        //fprintf(stderr, "[THREAD %02d] Waiting for client input\n", client_id);
 
         if ((n = read(*newsockfd, buffer, BUFFER_LEN-1)) < 0) {
             perror("ERROR reading from socket");
@@ -53,19 +53,20 @@ void *client_handler(void *thread_arg) {
         } else if(n == 0) {
             // end of file
             logger_log(args->addr, *newsockfd, "disconnected", 12);
-            fprintf(stderr, "[THREAD] Client %d disconnected\n", client_id);
+            //fprintf(stderr, "[THREAD] Client %d disconnected\n", client_id);
             break;
         }
 
         join_client_command(recieved_string, buffer, recv_str_len, recv_used_len);
 
         if(check_avail_thread(thread_avail_flags, CLIENT_COUNT) == 0) {
-            fprintf(stderr, "[THREAD] Client has reached maximum thread limit. Not parsing commands until a thread becomes available.\n");
+            //fprintf(stderr, "[THREAD] Client has reached maximum thread limit. Not parsing commands until a thread becomes available.\n");
+            sleep(1);
             continue;
         }
 
         while((cmd = get_command(recieved_string, *recv_str_len, recv_used_len)) != NULL) {
-            fprintf(stderr, "[THREAD] Command: %s\n", cmd);
+            //fprintf(stderr, "[THREAD] Command: %s\n", cmd);
             //logger_log(NULL, 0, cmd, strlen(cmd));
             logger_log(args->addr, *newsockfd, cmd, strlen(cmd));
 
@@ -151,10 +152,10 @@ void *client_handler(void *thread_arg) {
         }
     }
 
-    //free(recv_str_len);
-    //free(recv_used_len);
-    //free(recieved_string);
-    fprintf(stderr, "[THREAD] Client thread dying\n");
+    free(recv_str_len);
+    free(recv_used_len);
+    free(recieved_string);
+    //fprintf(stderr, "[THREAD] Client thread dying\n");
     reset_flag(flags+client_id);
     return 0;
 }
@@ -168,13 +169,13 @@ void *handler_wrapper(void *wrapper_arg) {
 
     reset_flag(flag);
 
-    fprintf(stderr, "[WRAPPER] Wrapper exiting..\n");
+    //fprintf(stderr, "[WRAPPER] Wrapper exiting..\n");
     return 0;
 }
 
 void work_handler_cleanup(void* cleanup_arg) {
     cleanup_arg_t *arg = (cleanup_arg_t*) cleanup_arg;
-    fprintf(stderr, "[THREAD] Cleanup: %d btches remain\n", arg->thread_count);
+    //fprintf(stderr, "[THREAD] Cleanup: %d btches remain\n", arg->thread_count);
 
     *(arg->cancelled) = 1;
     /*
@@ -195,7 +196,7 @@ void work_handler_cleanup(void* cleanup_arg) {
     pthread_mutex_t *mutex = arg->queue_mutex;
     int thread_id = arg->thread_id;
 
-    fprintf(stderr, "[THREAD] tid cleanup, thread is %d\n", thread_id);
+    //fprintf(stderr, "[THREAD] tid cleanup, thread is %d\n", thread_id);
     while(get_tid(tid_queue, mutex) != thread_id) {
         //fprintf(stderr, "Waiting for current pid \n");
         sleep(1);
@@ -203,7 +204,7 @@ void work_handler_cleanup(void* cleanup_arg) {
 
     rm_tid(tid_queue, mutex);
 
-    fprintf(stderr, "[THREAD] Finish cleanup thread %d\n", thread_id);
+    //fprintf(stderr, "[THREAD] Finish cleanup thread %d\n", thread_id);
 }
 
 void work_handler(worker_arg_t *arg) {
@@ -225,12 +226,12 @@ void work_handler(worker_arg_t *arg) {
 
     int curr;
     while((curr = get_tid(tid_queue, queue_mutex)) != thread_id) {
-        fprintf(stderr, "[THREAD] Worker %d is waiting for its turn, current is %d\n", thread_id, curr);
+        //fprintf(stderr, "[THREAD] Worker %d is waiting for its turn, current is %d\n", thread_id, curr);
         sleep(1);
     }
     pthread_mutex_lock(arg->worker_mutex);
 
-    fprintf(stderr, "[THREAD] Worker %d is now processing %s\n", thread_id, command_str);
+    //fprintf(stderr, "[THREAD] Worker %d is now processing %s\n", thread_id, command_str);
 
     uint32_t difficulty;
     uint64_t n;
@@ -264,27 +265,27 @@ void work_handler(worker_arg_t *arg) {
         if((pthread_create(btches + i, NULL, work_btch, (void*)(btch_args + i))) < 0) {
             perror("ERROR creating thread");
         }
-        fprintf(stdout, "[THREAD] Workerbtch made %lu\n", btches[i]);
+        //fprintf(stdout, "[THREAD] Workerbtch made %lu\n", btches[i]);
     }
 
     while(solution == 0) {
-        fprintf(stdout, "[THREAD] Waiting for solution..\n");
+        //fprintf(stdout, "[THREAD] Waiting for solution..\n");
         sleep(1);
     }
 
-    fprintf(stdout, "[THREAD] Solution found!\n");
+    //fprintf(stdout, "[THREAD] Solution found!\n");
     char* result = malloc(sizeof(char) * 98);
     char print_seed[65];
     bzero(print_seed, 65);
     memcpy(print_seed, raw_seed, 64);
     difficulty = htonl(difficulty);
     sprintf(result, "SOLN %08x %s %016lx\r\n", difficulty, print_seed, solution);
-    fprintf(stdout, "[THREAD] Sending!\n");
+    //fprintf(stdout, "[THREAD] Sending!\n");
     send_message(newsockfd, result, 97);
 
     pthread_mutex_unlock(arg->worker_mutex);
 
-    fprintf(stderr, "[THREAD] Worker %d cleaning up\n", thread_id);
+    //fprintf(stderr, "[THREAD] Worker %d cleaning up\n", thread_id);
     pthread_cleanup_pop(1);
     fprintf(stderr, "[THREAD] Worker %d exiting\n", thread_id);
     // do shit
@@ -320,7 +321,7 @@ void *work_btch(void *btch_arg) {
             break;
     }
 
-    fprintf(stderr, "[WORKBTCH] Work bitch %d is now dying\n", arg->btch_id);
+    //fprintf(stderr, "[WORKBTCH] Work bitch %d is now dying\n", arg->btch_id);
     return 0;
 }
 
@@ -331,7 +332,7 @@ void abrt_handler(worker_arg_t *arg) {
     char *pool_flag = arg->pool_flag;
     //pthread_mutex_t *queue_mutex = arg->queue_mutex;
 
-    fprintf(stderr, "[THREAD] Aborting all worker threads in queue %p\n", *tid_queue);
+    //fprintf(stderr, "[THREAD] Aborting all worker threads in queue %p\n", *tid_queue);
 
     int count = 0;
     queue_t *curr = *tid_queue;
@@ -358,8 +359,8 @@ void abrt_handler(worker_arg_t *arg) {
         //rm_tid(tid_queue, queue_mutex);
         prev = i;
     }
-    */
     fprintf(stderr, "[THREAD] Killed %d threads\n", count);
+    */
 }
 
 void soln_handler(worker_arg_t *arg) {
@@ -380,10 +381,10 @@ void soln_handler(worker_arg_t *arg) {
     /*
     char *to_send = malloc(sizeof(char)*9999);
     fprintf(stderr, "Calculating solution for d:%u s:%lu\r\n", difficulty, solution);
-    */
 
     fprintf(stderr, "[THREAD] Handling SOLN\n");
 
+    */
     int res;
     if((res = is_valid_soln(target, seed, solution)) == -1) {
         send_message(newsockfd, "OKAY\r\n", 6);
@@ -392,14 +393,14 @@ void soln_handler(worker_arg_t *arg) {
         send_formatted(newsockfd, "ERRO", "Not a valid solution");
     }
 
-    fprintf(stderr, "[THREAD] Handling SOLN Success\n");
+    //fprintf(stderr, "[THREAD] Handling SOLN Success\n");
 }
 
 void unkn_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
-    char *command_str = arg->command_str;
+    //char *command_str = arg->command_str;
 
-    fprintf(stderr, "[THREAD] Unknown command recieved: %s\n", command_str);
+    //fprintf(stderr, "[THREAD] Unknown command recieved: %s\n", command_str);
 
     send_formatted(newsockfd, "ERRO", "Unknown command");
 }
@@ -407,39 +408,39 @@ void unkn_handler(worker_arg_t *arg) {
 void erro_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
 
-    fprintf(stderr, "[THREAD] Handling ERRO\n");
+    //fprintf(stderr, "[THREAD] Handling ERRO\n");
     send_formatted(newsockfd, "ERRO", "Only I can send YOU errors =.=");
-    fprintf(stderr, "[THREAD] Handling ERRO Success\n");
+    //fprintf(stderr, "[THREAD] Handling ERRO Success\n");
 }
 
 void okay_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
 
-    fprintf(stderr, "[THREAD] Handling OKAY\n");
+    //fprintf(stderr, "[THREAD] Handling OKAY\n");
     send_formatted(newsockfd, "ERRO", "Dude it's not okay to send OKAY okay?");
-    fprintf(stderr, "[THREAD] Handling OKAY Success\n");
+    //fprintf(stderr, "[THREAD] Handling OKAY Success\n");
 }
 
 void pong_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
 
-    fprintf(stderr, "[THREAD] Handling PONG\n");
+    //fprintf(stderr, "[THREAD] Handling PONG\n");
     send_formatted(newsockfd, "ERRO", "PONG is strictly reserved for server");
-    fprintf(stderr, "[THREAD] Handling PONG Success\n");
+    //fprintf(stderr, "[THREAD] Handling PONG Success\n");
 }
 
 void ping_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
 
-    fprintf(stderr, "[THREAD] Handling PING\n");
+    //fprintf(stderr, "[THREAD] Handling PING\n");
     send_message(newsockfd, "PONG\r\n", 6);
-    fprintf(stderr, "[THREAD] Handling PING Success\n");
+    //fprintf(stderr, "[THREAD] Handling PING Success\n");
 }
 
 void slep_handler(worker_arg_t *arg) {
     int *newsockfd = arg->newsockfd;
 
-    fprintf(stderr, "[THREAD] Handling SLEP\n");
+    //fprintf(stderr, "[THREAD] Handling SLEP\n");
     char *to_send = "sleeping 3 seconds..";
     send_formatted(newsockfd, "OKAY", to_send);
 
@@ -447,7 +448,7 @@ void slep_handler(worker_arg_t *arg) {
 
     to_send = "I just woke up!";
     send_formatted(newsockfd, "OKAY", to_send);
-    fprintf(stderr, "[THREAD] Handling SLEP Success\n");
+    //fprintf(stderr, "[THREAD] Handling SLEP Success\n");
 }
 
 void rm_tid(queue_t **queue, pthread_mutex_t *mutex) {

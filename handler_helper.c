@@ -129,12 +129,12 @@ void byte_print(FILE *stream, BYTE *byte, size_t size) {
 }
 
 BYTE *get_target(uint32_t difficulty) {
-    fprintf(stderr, "[THREAD] Calculating target from %x %u\n", difficulty, difficulty);
+    //fprintf(stderr, "[THREAD] Calculating target from %x %u\n", difficulty, difficulty);
 
     int *alpha_int = malloc(sizeof(int));
 
     *alpha_int = (difficulty) & 0xFF;
-    fprintf(stderr, "[THREAD] alpha = %d, alpha - 3 = %d (%x)\n", *alpha_int, *alpha_int - 3, *alpha_int - 3);
+    //fprintf(stderr, "[THREAD] alpha = %d, alpha - 3 = %d (%x)\n", *alpha_int, *alpha_int - 3, *alpha_int - 3);
 
     BYTE beta[32];
     uint256_init(beta);
@@ -144,7 +144,7 @@ BYTE *get_target(uint32_t difficulty) {
     beta[30] = (difficulty >> (8*2)) & 0xFF;
     beta[31] = (difficulty >> (8*3)) & 0xFF;
 
-    fprintf(stderr, "[THREAD] beta is:   ");
+    //fprintf(stderr, "[THREAD] beta is:   ");
     byte_print(stderr, beta, 32);
 
     BYTE *target = malloc(sizeof(BYTE) * 32);
@@ -158,14 +158,14 @@ BYTE *get_target(uint32_t difficulty) {
     free(alpha_int);
     free(two_exp);
 
-    fprintf(stderr, "[THREAD] target is: ");
+    //fprintf(stderr, "[THREAD] target is: ");
     byte_print(stderr, target, 32);
 
     return target;
 }
 
 BYTE *seed_from_raw(char* raw_seed) {
-    fprintf(stderr, "[THREAD] Parsing seed: ");
+    //fprintf(stderr, "[THREAD] Parsing seed: ");
 
     BYTE *seed = hstob(raw_seed, 32);
     byte_print(stderr, seed, 32);
