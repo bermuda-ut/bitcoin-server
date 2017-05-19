@@ -13,6 +13,7 @@
 #include "logger.h"
 
 void *client_handler(void *thread_arg) {
+    pthread_detach(pthread_self());
     thread_arg_t *args = (thread_arg_t*) thread_arg;
 
 	char buffer[BUFFER_LEN],
@@ -50,6 +51,7 @@ void *client_handler(void *thread_arg) {
 
         } else if(n == 0) {
             // end of file
+            logger_log(args->addr, *newsockfd, "disconnected", 12);
             fprintf(stderr, "[THREAD] Client %d disconnected\n", client_id);
             break;
         }
@@ -63,6 +65,8 @@ void *client_handler(void *thread_arg) {
 
         while((cmd = get_command(recieved_string, *recv_str_len, recv_used_len)) != NULL) {
             fprintf(stderr, "[THREAD] Command: %s\n", cmd);
+            //logger_log(NULL, 0, cmd, strlen(cmd));
+            logger_log(args->addr, *newsockfd, cmd, strlen(cmd));
 
             int thread_id;
             while((thread_id = get_avail_thread(thread_avail_flags, CLIENT_COUNT)) == -1) {
@@ -190,7 +194,7 @@ void work_handler_cleanup(void* cleanup_arg) {
 
     fprintf(stderr, "[THREAD] tid cleanup, thread is %d\n", thread_id);
     while(get_tid(tid_queue, mutex) != thread_id) {
-        fprintf(stderr, "Waiting for current pid \n");
+        //fprintf(stderr, "Waiting for current pid \n");
         sleep(1);
     }
 
@@ -267,8 +271,8 @@ void work_handler(worker_arg_t *arg) {
     fprintf(stdout, "[THREAD] Solution found!\n");
     char* result = malloc(sizeof(char));
     char print_seed[65];
+    bzero(print_seed, 65);
     memcpy(print_seed, raw_seed, 64);
-    print_seed[65] = '\0';
     difficulty = htonl(difficulty);
     sprintf(result, "SOLN %08x %s %016lx\r\n", difficulty, print_seed, solution);
     fprintf(stdout, "[THREAD] Sending!\n");

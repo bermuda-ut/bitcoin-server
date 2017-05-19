@@ -11,16 +11,17 @@
 #ifndef LOGGER
 #define LOGGER
 #include "netsock.h"
+#include <time.h>
 
 typedef struct {
     Sockaddr_in *src;
-    char* time_str;
+    struct tm *timeinfo;
     char* str;
     int len;
     int id;
 } logger_arg_t;
 
-extern int init_logger();
+extern int init_logger(Sockaddr_in *);
 extern void close_logger();
 extern void logger_log(Sockaddr_in* src, int id, char* str, int len);
 void *logger_handler(void* logger_arg);

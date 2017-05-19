@@ -14,7 +14,6 @@
 #include "logger.h"
 
 int main(int argc, char **argv) {
-    init_logger();
 	int sockfd, portno;
 	Sockaddr_in serv_addr;
     //fclose(stderr);
@@ -28,6 +27,8 @@ int main(int argc, char **argv) {
 
     make_socket(&serv_addr, &sockfd, portno);
     bind_socket(serv_addr, sockfd);
+
+    init_logger(&serv_addr);
 
     char *thread_avail_flags = init_avail_flags(CLIENT_COUNT);
     pthread_t thread_pool[CLIENT_COUNT];
