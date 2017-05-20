@@ -41,7 +41,7 @@ void *client_handler(void *thread_arg) {
     pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
     pthread_mutex_t worker_mutex = PTHREAD_MUTEX_INITIALIZER;
     sem_t worker_sem;
-    sem_init(&worker_sem, CONCURRENT_WORK_COUNT, CONCURRENT_WORK_COUNT);
+    sem_init(&worker_sem, 0, CONCURRENT_WORK_COUNT);
 
     while(1) {
         bzero(buffer, BUFFER_LEN);
@@ -236,6 +236,7 @@ void work_handler(worker_arg_t *arg) {
 
     sscanf(command_str + 5, "%x %s %lx %x", &difficulty, raw_seed, &n, &thread_count);
     difficulty = ntohl(difficulty);
+    //n = ntohl(difficulty);
     if(thread_count > WORKER_COUNT_MAX)
         thread_count = WORKER_COUNT_MAX;
 
@@ -249,9 +250,12 @@ void work_handler(worker_arg_t *arg) {
     cleanup_arg.btches = &btches;
     cleanup_arg.thread_count = thread_count;
 
-    uint64_t chunk = UINT64_MAX / thread_count;
 
     sem_wait(worker_sem);
+    uint64_t chunk = (UINT64_MAX - n) / thread_count;
+
+    //fprintf(stderr, "n is %lu %lx\n", n, n);
+    //fprintf(stderr, "chunk size is %lu - %lu = %lu / threadcount = %lu\n", UINT64_MAX, n, UINT64_MAX - n, chunk);
     for(int i = 0; i < thread_count; i++) {
         btch_args[i].solution = &solution;
         btch_args[i].target = target;
@@ -259,12 +263,12 @@ void work_handler(worker_arg_t *arg) {
         btch_args[i].cancelled = &cancelled;
         btch_args[i].sol_mutex = &sol_mutex;
         btch_args[i].btch_id = i;
-        btch_args[i].start = i * chunk;
+        btch_args[i].start = n + i * chunk;
 
         if(i == thread_count - 1)
             btch_args[i].end = UINT64_MAX;
         else
-            btch_args[i].end = (i + 1) * chunk;
+            btch_args[i].end = n + (i + 1) * chunk;
 
         if((pthread_create(btches + i, NULL, work_btch, (void*)(btch_args + i))) < 0) {
             perror("ERROR creating thread");
@@ -315,7 +319,7 @@ void *work_btch(void *btch_arg) {
     int *cancelled = arg->cancelled;
 
     uint64_t trying = start;
-    //fprintf(stderr, "thread trying from %lu to %lu (inclusive)\n", start, end);
+    fprintf(stderr, "thread trying from %lu to %lu (inclusive)\n", start, end);
     while(1) {
         int res;
 
