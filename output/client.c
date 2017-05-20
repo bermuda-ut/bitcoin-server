@@ -20,7 +20,7 @@ int main(int argc, char**argv)
 	struct sockaddr_in serv_addr;
 	struct hostent *server;
 
-	char buffer[256];
+	char buffer[9999];
 
 	if (argc < 3) 
 	{
@@ -76,7 +76,7 @@ int main(int argc, char**argv)
 	*/
 	
 
-	bzero(buffer,256);
+	bzero(buffer,9999);
 
     //strcpy(buffer, "PING\r\nPING\r\n");
 	
@@ -89,8 +89,9 @@ int main(int argc, char**argv)
 	//strcpy(buffer, "SOLN 1effffff 0000000019d6689c085ae165831e934ff763ae46a218a6c172b3f1b60a8ce26f 100000002321ed8f\r\n");
 	
 	
-	strcpy(buffer, "WORK 1fffffff 0000000019d6689c085ae165831e934ff763ae46a218a6c172b3f1b60a8ce26f 1000000023212000 01\r\n");
+	//strcpy(buffer, "WORK 1fffffff 0000000019d6689c085ae165831e934ff763ae46a218a6c172b3f1b60a8ce26f 1000000023212000 01\r\n");
 	
+    strcpy(buffer, "WORK 1fffffff 0000000019d6689c085ae165831e934ff763ae46a218a6c172b3f1b60a8ce26f 0000000000000000 02\r\nWORK 1fffffff 0000000019d6689c085ae165831e934ff763ae46a218a6c172b3f1b60a8ce26f 1000000023212399 01\r\nWORK 1effffff 0000000019d6689c085ae165831e934ff763ae46a218a6c172b3f1b60a8ce26f 0000000000000000 03\r\nWORK 1dffffff 0000000019d6689c085ae165831e934ff763ae46a218a6c172b3f1b60a8ce26f 0000000000000000 04\r\nWORK 1d29ffff 0000000019d6689c085ae165831e934ff763ae46a218a6c172b3f1b60a8ce26f a000000000000000 04\r\nWORK 1fffffff 0000000019d6689c085ae165831e934ff763ae46a218a6c172b3f1b60a8ce26f 0000000000000000 06\r\nWORK 1fffffff 0000000019d6689c085ae165831e934ff763ae46a218a6c172b3f1b60a8ce26f 0000000000000000 06\r\nWORK 1fffffff 0000000019d6689c085ae165831e934ff763ae46a218a6c172b3f1b60a8ce26f 0000000000000000 06\r\nWORK 1fffffff 0000000019d6689c085ae165831e934ff763ae46a218a6c172b3f1b60a8ce26f 0000000000000000 06\r\nWORK 1fffffff 0000000019d6689c085ae165831e934ff763ae46a218a6c172b3f1b60a8ce26f 0000000000000000 06\r\n");
     
 	//strcpy(buffer, "WORK 1fffffff 0000000019d6689c085ae165831e934ff763ae46a218a6c172b3f1b60a8ce26f 1000000023212399 01\r\n");
 		    
@@ -117,15 +118,17 @@ int main(int argc, char**argv)
 		exit(0);
 	}
 	
-	bzero(buffer,256);
+    for(int i = 0; i < 10; i++) {
+        bzero(buffer,256);
 
-	n = read(sockfd,buffer,255);
-	
-	if (n < 0)
-	{
-		perror("ERROR reading from socket");
-		exit(0);
-	}
+        n = read(sockfd,buffer,255);
+        
+        if (n < 0)
+        {
+            perror("ERROR reading from socket");
+            exit(0);
+        }
+    }
 
 	printf("%s\n",buffer);
 

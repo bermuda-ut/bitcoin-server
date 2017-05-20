@@ -73,11 +73,11 @@ void logger_log(Sockaddr_in* src, int id, char* str, int len) {
     fwrite(&to_write, strlen(to_write), 1, _logger_file);
     fflush(_logger_file);
 
-    fprintf(stderr, "%s", to_write);
-    fflush(stderr);
 }
 
 /*
+    fprintf(stdout, "%s", to_write);
+    fflush(stdout);
 void *logger_handler(void* logger_arg) {
     pthread_detach(pthread_self());
 

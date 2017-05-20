@@ -19,7 +19,7 @@
 
 // maximum number of threads used to calculate work for the client
 #define WORKER_COUNT_MAX 10
-#define CONCURRENT_WORK_COUNT 2
+#define CONCURRENT_WORK_COUNT 10
 
 #include "handler_helper.h"
 #include <semaphore.h>
@@ -70,6 +70,7 @@ typedef struct {
 
     queue_t **tid_queue;
     pthread_mutex_t *queue_mutex;
+    sem_t *worker_sem;
 } cleanup_arg_t;
 
 extern void *client_handler(void *);
