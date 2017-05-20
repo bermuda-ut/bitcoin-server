@@ -70,9 +70,11 @@ void logger_log(Sockaddr_in* src, int id, char* str, int len) {
             timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec,
             id, ip, port, cpy);
 
-    fprintf(stderr, "%s", to_write);
     fwrite(&to_write, strlen(to_write), 1, _logger_file);
     fflush(_logger_file);
+
+    fprintf(stderr, "%s", to_write);
+    fflush(stderr);
 }
 
 /*

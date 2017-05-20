@@ -145,7 +145,7 @@ BYTE *get_target(uint32_t difficulty) {
     beta[31] = (difficulty >> (8*3)) & 0xFF;
 
     //fprintf(stderr, "[THREAD] beta is:   ");
-    byte_print(stderr, beta, 32);
+    //byte_print(stderr, beta, 32);
 
     BYTE *target = malloc(sizeof(BYTE) * 32);
     BYTE* two_exp = malloc(sizeof(BYTE) * 32);
@@ -159,7 +159,7 @@ BYTE *get_target(uint32_t difficulty) {
     free(two_exp);
 
     //fprintf(stderr, "[THREAD] target is: ");
-    byte_print(stderr, target, 32);
+    //byte_print(stderr, target, 32);
 
     return target;
 }
@@ -168,7 +168,7 @@ BYTE *seed_from_raw(char* raw_seed) {
     //fprintf(stderr, "[THREAD] Parsing seed: ");
 
     BYTE *seed = hstob(raw_seed, 32);
-    byte_print(stderr, seed, 32);
+    //byte_print(stderr, seed, 32);
 
     return seed;
 }

@@ -19,17 +19,19 @@
 
 // maximum number of threads used to calculate work for the client
 #define WORKER_COUNT_MAX 10
+#define CONCURRENT_WORK_COUNT 2
 
 #include "handler_helper.h"
+#include <semaphore.h>
 
 typedef struct queue {
     int thread_id;
-    struct queue* next;
+    struct queue *next;
 } queue_t;
 
 typedef struct {
-    int* newsockfd;
-    char* command_str;
+    int *newsockfd;
+    char *command_str;
     int thread_id;
     int client_id;
 
@@ -38,22 +40,25 @@ typedef struct {
     pthread_mutex_t *queue_mutex;
     pthread_mutex_t *worker_mutex;
     pthread_t *thread_pool;
-    char* pool_flag;
+    char *pool_flag;
+    sem_t *worker_sem;
 } worker_arg_t;
 
 typedef struct {
     void (*worker_func)(worker_arg_t*);
-    char* flag;
+    char *flag;
     worker_arg_t *worker_arg;
 } wrapper_arg_t;
 
 typedef struct {
-    uint64_t* solution;
-    uint64_t* n;
+    uint64_t *solution;
+    //uint64_t* n;
+    uint64_t start;
+    uint64_t end;
     int *cancelled;
     int btch_id;
-    BYTE* target;
-    BYTE* seed;
+    BYTE *target;
+    BYTE *seed;
     pthread_mutex_t* sol_mutex;
 } btch_arg_t;
 

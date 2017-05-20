@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
 	listen(sockfd, CLIENT_COUNT);
 
     char warned = 0;
-    int count = 0;
+    //int count = 0;
 
     while(1) {
         Sockaddr_in *cli_addr = malloc(sizeof(Sockaddr_in));
