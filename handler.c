@@ -1,11 +1,11 @@
 /*=============================================================================
 #     FileName: handler.c
-#         Desc:  
+#         Desc: handlers for client
 #       Author: Max Lee
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-17 00:28:49
+#   LastChange: 2017-05-22 20:33:41
 =============================================================================*/
 #include "handler.h"
 #include "threads.h"
@@ -64,7 +64,7 @@ void *client_handler(void *thread_arg) {
 
         } else if(n == 0) {
             // end of file
-            logger_log(args->addr, *newsockfd, "disconnected", 12);
+            logger_log(args->addr, *newsockfd, "Disconnected", 12);
             //fprintf(stderr, "[THREAD] Client %d disconnected\n", client_id);
             break;
         }
@@ -273,7 +273,7 @@ void work_handler(worker_arg_t *arg) {
 
     //fprintf(stderr, "[THREAD] Worker %d waiting for %s\n", thread_id, command_str);
     sem_wait(worker_sem);
-    fprintf(stderr, "[THREAD] Worker %d is now processing %s\n", thread_id, command_str);
+    //fprintf(stderr, "[THREAD] Worker %d is now processing %s\n", thread_id, command_str);
 
     uint64_t chunk = (UINT64_MAX - n) / thread_count;
 
@@ -383,24 +383,6 @@ void abrt_handler(worker_arg_t *arg) {
         count++;
     }
     pthread_mutex_unlock(arg->worker_mutex);
-
-    /*
-    while((i = get_tid(tid_queue, queue_mutex)) >= 0) {
-        if(prev != i) {
-            fprintf(stderr, "[THREAD] Killing worker thread %d\n", i);
-
-            pthread_cancel(thread_pool[i]);
-            reset_flag(pool_flag + i);
-
-            count++;
-        } else {
-            sleep(1);
-        }
-        //rm_tid(tid_queue, queue_mutex);
-        prev = i;
-    }
-    fprintf(stderr, "[THREAD] Killed %d threads\n", count);
-    */
 }
 
 void soln_handler(worker_arg_t *arg) {

@@ -5,7 +5,7 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-19 01:55:56
+#   LastChange: 2017-05-22 20:33:26
 =============================================================================*/
 #include "driver.h"
 #include "netsock.h"
@@ -16,23 +16,23 @@
 int main(int argc, char **argv) {
 	int sockfd, portno;
 	Sockaddr_in serv_addr;
-    //fclose(stderr);
-    //fclose(stdout);
 
 	if (argc < 2) {
 		fprintf(stderr, "ERROR, no port provided\n");
 		exit(EXIT_FAILURE);
 	}
-	portno = atoi(argv[1]);
 
+    // open socket
+	portno = atoi(argv[1]);
     make_socket(&serv_addr, &sockfd, portno);
     bind_socket(serv_addr, sockfd);
 
+    // setup 
     init_logger(&serv_addr);
-
     char *thread_avail_flags = init_avail_flags(CLIENT_COUNT);
     pthread_t thread_pool[CLIENT_COUNT];
 
+    // server ready!
 	listen(sockfd, CLIENT_COUNT);
 
     char warned = 0;
@@ -60,6 +60,7 @@ int main(int argc, char **argv) {
             sleep(1);
         };
 
+        // reset flag
         if(warned) {
             warned = 0;
             //fprintf(stderr, "[SERVER] Blocked connections now allowed.\n");
@@ -71,9 +72,10 @@ int main(int argc, char **argv) {
         thread_arg->i = i;
         thread_arg->addr = cli_addr;
 
-        logger_log(cli_addr, *newsockfd, "connected", 9);
+        logger_log(cli_addr, *newsockfd, "Connected", 9);
         //fprintf(stderr, "[SERVER] Client %d connected, new sock %d\n", i, *newsockfd);
 
+        // create thread that is dedicated to serving the client
         if((pthread_create(thread_pool + i, NULL, client_handler, (void*)thread_arg)) < 0) {
             perror("ERROR creating thread");
         }

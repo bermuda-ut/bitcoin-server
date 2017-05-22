@@ -5,7 +5,7 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-20 19:34:57
+#   LastChange: 2017-05-22 21:35:46
 #      History:
 =============================================================================*/
 #include "logger.h"
@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <arpa/inet.h>
+#define DEBUG 0
 
 // private
 FILE *_logger_file = NULL;
@@ -20,44 +21,68 @@ int _logger_fd = -1;
 pthread_mutex_t _logger_mutex = PTHREAD_MUTEX_INITIALIZER;
 Sockaddr_in *_logger_svr_info;
 
+char* _coin_ascii = "                     ______________\n\
+        __,.,---'''''              '''''---..._\n\
+     ,-'             .....:::''::.:            '`-.\n\
+    |           ...:::.....       '               |\n\
+    |           ''':::'''''       .               |\n\
+    |'-.._           ''''':::..::':          __,,-|\n\
+     '-.._''`---.....______________.....---''__,,-\n\
+          ''`---.....______________.....---''";
+
+char* _svr_ascii =
+"  ___ _ _    ___     _        ___\n\
+ | _ |_) |_ / __|___(_)_ _   / __| ___ _ ___ _____ _ _ \n\
+ | _ \\ |  _| (__/ _ \\ | ' \\  \\__ \\/ -_) '_\\ V / -_) '_|\n\
+ |___/_|\\__|\\___\\___/_|_||_| |___/\\___|_|  \\_/\\___|_|";
+
+/*
+ * Initialize logger
+ * */
 int init_logger(Sockaddr_in *svr_info) {
     _logger_file = fopen("log.txt", "a+");
     _logger_fd = fileno(_logger_file);
     _logger_svr_info = svr_info;
+
+    // something went wrong
     if(_logger_file == 0) return 0;
 
-    char* to_write = "----------BIT COIN SERVER STARTED---------";
-    fwrite(&to_write, strlen(to_write), 1, _logger_file);
+    char* mode = "Production";
+#if DEBUG
+    mode = "Debug";
+#endif
+    fprintf(stdout, "\n\n%s\n\n", _coin_ascii);
+    fprintf(stdout, "%s\n\n\n", _svr_ascii);
+    fprintf(stdout, "--------------------------------------------------------\n\
+ Author     : Max Lee\n\
+ Server Mode: %s\n\
+ Date       : 22/MAY/17\n\
+ Multithreaded Bitcoin Server based on CS Project2\n\
+ Written in blood and tears, not from this project </3\n\
+\n\
+ mirrorstairstudio.com                  mallocsizeof.me\n\
+--------------------------------------------------------\n", mode);
 
     return 1;
 }
 
+/*
+ * close logger
+ * */
 void close_logger() {
     fclose(_logger_file);
 }
 
+/*
+ * log into the file, thread safe
+ * */
 void logger_log(Sockaddr_in* src, int id, char* str, int len) {
     char *cpy = malloc(sizeof(char) * strlen(str));
     strcpy(cpy, str);
-    struct tm *timeinfo;
+    struct tm *timeinfo = malloc(sizeof(*timeinfo));
     time_t rawtime;
     time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    //time_str = asctime(timeinfo);
-
-    /*
-    logger_arg_t *arg = malloc(sizeof(logger_arg_t));
-    arg->timeinfo = timeinfo;
-    arg->src = src;
-    arg->str = str;
-    arg->len = len;
-    arg->id = id;
-
-    pthread_t thread;
-    if((pthread_create(&thread, NULL, logger_handler, (void*)arg)) < 0) {
-        perror("ERROR creating thread");
-    }
-    */
+    localtime_r(&rawtime, timeinfo);
 
     char* ip = "0.0.0.0";
     int port = ntohs(_logger_svr_info->sin_port);
@@ -74,46 +99,14 @@ void logger_log(Sockaddr_in* src, int id, char* str, int len) {
             timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec,
             id, ip, port, cpy);
 
+#if DEBUG
+    fprintf(stdout, "%s", to_write);
+    fflush(stdout);
+#endif
+
     fwrite(&to_write, strlen(to_write), 1, _logger_file);
     fflush(_logger_file);
 
-    fprintf(stdout, "%s", to_write);
-    fflush(stdout);
+    free(timeinfo);
 }
 
-/*
-void *logger_handler(void* logger_arg) {
-    pthread_detach(pthread_self());
-
-    if(_logger_fd == -1) {
-        fprintf(stderr, "[LOGGER] logger was not initialized\n");
-    }
-
-    pthread_mutex_lock(&_logger_mutex);
-
-    logger_arg_t *arg = (logger_arg_t*) logger_arg;
-    Sockaddr_in *src = arg->src;
-    char* ip = "0.0.0.0";
-    char *time_str = arg->time_str;
-    time_str[strlen(time_str) - 1] = '\0';
-
-    if(src)
-        ip = inet_ntoa(src->sin_addr);
-
-    fprintf(stderr, "[LOGGER] Writing log..\n");
-
-    fprintf(_logger_file, "[%s] %s:%d ", time_str, ip, ntohs(src->sin_port));
-    for(int i = 0; i < arg->len; i++)
-        fprintf(_logger_file, "%c", arg->str[i]);
-    fprintf(_logger_file, "\n");
-
-    fflush(_logger_file);
-
-    free(arg);
-    pthread_mutex_unlock(&_logger_mutex);
-
-    fprintf(stderr, "[LOGGER] Logger exiting\n");
-
-    return 0;
-}
-*/
