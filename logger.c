@@ -1,27 +1,25 @@
 /*=============================================================================
 #     FileName: logger.c
-#         Desc:  
+#         Desc: logging to a file :)
 #       Author: Max Lee
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-22 21:35:46
-#      History:
+#   LastChange: 2017-05-22 22:42:21
 =============================================================================*/
 #include "logger.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <arpa/inet.h>
-#define DEBUG 0
 
-// private
+// Private.. in a dirty method. Should be in .h but wtv
 FILE *_logger_file = NULL;
 int _logger_fd = -1;
 pthread_mutex_t _logger_mutex = PTHREAD_MUTEX_INITIALIZER;
 Sockaddr_in *_logger_svr_info;
 
-char* _coin_ascii = "                     ______________\n\
+const char* _coin_ascii = "                     ______________\n\
         __,.,---'''''              '''''---..._\n\
      ,-'             .....:::''::.:            '`-.\n\
     |           ...:::.....       '               |\n\
@@ -30,7 +28,7 @@ char* _coin_ascii = "                     ______________\n\
      '-.._''`---.....______________.....---''__,,-\n\
           ''`---.....______________.....---''";
 
-char* _svr_ascii =
+const char* _svr_ascii =
 "  ___ _ _    ___     _        ___\n\
  | _ |_) |_ / __|___(_)_ _   / __| ___ _ ___ _____ _ _ \n\
  | _ \\ |  _| (__/ _ \\ | ' \\  \\__ \\/ -_) '_\\ V / -_) '_|\n\
@@ -51,6 +49,7 @@ int init_logger(Sockaddr_in *svr_info) {
 #if DEBUG
     mode = "Debug";
 #endif
+
     fprintf(stdout, "\n\n%s\n\n", _coin_ascii);
     fprintf(stdout, "%s\n\n\n", _svr_ascii);
     fprintf(stdout, "--------------------------------------------------------\n\
@@ -79,6 +78,7 @@ void close_logger() {
 void logger_log(Sockaddr_in* src, int id, char* str, int len) {
     char *cpy = malloc(sizeof(char) * strlen(str));
     strcpy(cpy, str);
+
     struct tm *timeinfo = malloc(sizeof(*timeinfo));
     time_t rawtime;
     time(&rawtime);
@@ -99,14 +99,15 @@ void logger_log(Sockaddr_in* src, int id, char* str, int len) {
             timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec,
             id, ip, port, cpy);
 
-#if DEBUG
-    fprintf(stdout, "%s", to_write);
-    fflush(stdout);
+#if LOG_OUTPUT
+    fprintf(stderr, "%s", to_write);
+    fflush(stderr);
 #endif
 
     fwrite(&to_write, strlen(to_write), 1, _logger_file);
     fflush(_logger_file);
 
     free(timeinfo);
+    free(cpy);
 }
 

@@ -1,12 +1,11 @@
 /*=============================================================================
 #     FileName: netsock.h
-#         Desc:  
+#         Desc: network basics
 #       Author: Max Lee
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-09 09:35:31
-#      History:
+#   LastChange: 2017-05-22 22:45:44
 =============================================================================*/
 #ifndef NETSOCK
 #define NETSOCK

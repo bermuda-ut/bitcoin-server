@@ -1,12 +1,11 @@
 /*=============================================================================
 #     FileName: logger.h
-#         Desc:  
+#         Desc: logger definitions
 #       Author: Max Lee
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-22 19:55:35
-#      History:
+#   LastChange: 2017-05-22 22:28:02
 =============================================================================*/
 #ifndef LOGGER
 #define LOGGER
@@ -23,6 +22,6 @@ typedef struct {
 
 extern int init_logger(Sockaddr_in *);
 extern void close_logger();
+
 extern void logger_log(Sockaddr_in* src, int id, char* str, int len);
-void *logger_handler(void* logger_arg);
 #endif

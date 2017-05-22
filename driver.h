@@ -10,13 +10,14 @@
 #ifndef DRIVER
 #define DRIVER
 
-#define CLIENT_COUNT 100
-#define CLIENT_JOB_COUNT 10
-#define BUFFER_LEN 256
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+
+#define DEBUG 0
+#define LOG_OUTPUT 0
+#define CLIENT_COUNT 100
+#define BUFFER_LEN 256
 
 #endif

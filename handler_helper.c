@@ -1,8 +1,19 @@
+/*=============================================================================
+#     FileName: handler_helper.c
+#         Desc: functions that assist handlers in general
+#       Author: Max Lee
+#        Email: hoso1312@gmail.com
+#     HomePage: mallocsizeof.me
+#      Version: 0.0.1
+#   LastChange: 2017-05-22 22:28:17
+=============================================================================*/
 #include "handler_helper.h"
 #include "sha256.h"
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 
+// I am sorry.
 BYTE BYTE_TWO[] = {
     0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00,
@@ -15,38 +26,82 @@ BYTE BYTE_TWO[] = {
     0x00, 0x00, 0x00, 0x02
 };
 
+//==============================================================================
 
-// hex string to byte
-BYTE *hstob(char *hex_string, size_t size) {
-    BYTE *val = malloc(sizeof(BYTE) * size);
-    bzero(val, size);
+// aka pop head from queue
+void rm_tid(queue_t **queue, pthread_mutex_t *mutex) {
+    pthread_mutex_lock(mutex);
 
-    char* pos = hex_string;
-
-    for(size_t count = 0; count < size; count++) {
-        sscanf(pos, "%2hhx", val+count);
-        pos += 2;
+    if(*queue != NULL) {
+        queue_t* tmp = *queue;
+        *queue = (*queue)->next;
+        free(tmp);
     }
+
+    pthread_mutex_unlock(mutex);
+}
+
+// aka push tail to queue
+void push_tid(queue_t **queue, pthread_mutex_t *mutex, int tid) {
+    pthread_mutex_lock(mutex);
+
+    queue_t *curr = *queue;
+    queue_t *new = malloc(sizeof(queue_t));
+
+    new->next = NULL;
+    new->thread_id = tid;
+
+    if(curr != NULL) {
+        while(curr->next != NULL)
+            curr = curr->next;
+        curr->next = new;
+    } else {
+        *queue = new;
+    }
+
+    pthread_mutex_unlock(mutex);
+}
+
+// aka read head
+int get_tid(queue_t **queue, pthread_mutex_t *mutex) {
+    int val = -1;
+
+    pthread_mutex_lock(mutex);
+    if(*queue != NULL)
+        val = (*queue)->thread_id;
+    pthread_mutex_unlock(mutex);
 
     return val;
 }
 
+// aka print plz
+void print_queue(queue_t *q) {
+    queue_t *curr = q;
+    fprintf(stderr, "[ ");
+    while(curr) {
+        fprintf(stderr, "%d ", curr->thread_id);
+        curr = curr->next;
+    }
+    fprintf(stderr, "]\n");
+}
+
+//==============================================================================
+
+/**
+ * try to get command from existing string
+ * command = something that ends with \r\n
+ */
 char* get_command(char** full_cmd_str, int len, int *used_len) {
     for(int i = 0; i < *used_len - 1; i++) {
         if((*full_cmd_str)[i] == '\r' && (*full_cmd_str)[i+1] == '\n') {
             // 0 1 2 3 4  5  6 7 8 9
             // P I N G \r \n P I N G
             //          ^ i is here
-            //fprintf(stdout, "------\nBefore %s\n", *full_cmd_str);
             char *cmd = malloc(sizeof(char) * (i + 1));
             memcpy(cmd, *full_cmd_str, i);
 
-            /*
-            for(int j = 0; j < i; j++) {
-                cmd[j] = (*full_cmd_str)[j];
-            }
-            */
-            cmd[i] = '\0';
+            // null terminate to make our life easier
+            cmd[i] = '\0'; 
 
             char *rest = malloc(sizeof(char) * len);
             memcpy(rest, (*full_cmd_str) + i + 2, len - i - 2);
@@ -55,9 +110,6 @@ char* get_command(char** full_cmd_str, int len, int *used_len) {
             *full_cmd_str = rest;
             *used_len -= (i + 2);
 
-            //fprintf(stdout, "Extrt: %s\n", cmd);
-            //fprintf(stdout, "After %s\n", *full_cmd_str);
-
             return cmd;
         }
     }
@@ -65,21 +117,27 @@ char* get_command(char** full_cmd_str, int len, int *used_len) {
     return NULL;
 }
 
+/**
+ * join the commands into the buffer
+ */
 void join_client_command(char **str, char *command_str, int *str_len, int* used_len) {
     int cmd_len = strlen(command_str);
-    //fprintf(stdout, "JOIN %s and %s\n", *str, command_str);
 
     while(*str_len < *used_len + cmd_len + 1) {
-        //int tmp = *str_len;
         *str_len = *str_len * 2;
         *str = realloc(*str, sizeof(char) * *str_len);
-        //bzero((*str)+tmp, *str_len - tmp);
     }
 
+    // cnt strcpy >:( stuff are not null terminated.
     memcpy((*str)+*used_len, command_str, cmd_len);
     *used_len += cmd_len;
 }
 
+//==============================================================================
+
+/**
+ * send formatted message to the client, according to specs
+ */
 void send_formatted(int *newsockfd, char* info, char* msg) {
     char *to_send = malloc(sizeof(char) * 45);
 
@@ -105,6 +163,9 @@ void send_formatted(int *newsockfd, char* info, char* msg) {
     send_message(newsockfd, to_send, 45);
 }
 
+/**
+ * send raw message to the client
+ */
 void send_message(int *newsockfd, char* to_send, int len) {
     int n;
 
@@ -118,6 +179,9 @@ void send_message(int *newsockfd, char* to_send, int len) {
     }
 }
 
+/**
+ * print bytes to stream
+ */
 void byte_print(FILE *stream, BYTE *byte, size_t size) {
     fprintf (stream, "0x");
 
@@ -128,25 +192,46 @@ void byte_print(FILE *stream, BYTE *byte, size_t size) {
     fprintf (stream, "\n");
 }
 
+/**
+ * hex string to byte array
+ */
+BYTE *hstob(char *hex_string, size_t size) {
+    BYTE *val = malloc(sizeof(BYTE) * size);
+    bzero(val, size);
+
+    char* pos = hex_string;
+
+    for(size_t count = 0; count < size; count++) {
+        sscanf(pos, "%2hhx", val+count);
+        pos += 2;
+    }
+
+    return val;
+}
+
+//==============================================================================
+//
 BYTE *get_target(uint32_t difficulty) {
-    //fprintf(stderr, "[THREAD] Calculating target from %x %u\n", difficulty, difficulty);
+    fprintf(stdout, "[ TARGET ] Calculating target from %x %u\n", difficulty, difficulty);
 
     int *alpha_int = malloc(sizeof(int));
 
     *alpha_int = (difficulty) & 0xFF;
-    //fprintf(stderr, "[THREAD] alpha = %d, alpha - 3 = %d (%x)\n", *alpha_int, *alpha_int - 3, *alpha_int - 3);
+    fprintf(stdout, "[ TARGET ] Alpha = %d, Alpha - 3 = %d (%x)\n", *alpha_int, *alpha_int - 3, *alpha_int - 3);
 
+    // init beta
     BYTE beta[32];
     uint256_init(beta);
 
-    //...disgusting
+    //...disgusting :(
     beta[29] = (difficulty >> (8*1)) & 0xFF;
     beta[30] = (difficulty >> (8*2)) & 0xFF;
     beta[31] = (difficulty >> (8*3)) & 0xFF;
 
-    //fprintf(stderr, "[THREAD] beta is:   ");
-    //byte_print(stderr, beta, 32);
+    fprintf(stdout, "[ TARGET ] Beta is:   ");
+    byte_print(stdout, beta, 32);
 
+    // init target and exponent for calculation
     BYTE *target = malloc(sizeof(BYTE) * 32);
     BYTE* two_exp = malloc(sizeof(BYTE) * 32);
     uint256_init(target);
@@ -155,26 +240,26 @@ BYTE *get_target(uint32_t difficulty) {
     uint256_exp(two_exp, BYTE_TWO, 8 * (*alpha_int - 3));
     uint256_mul(target, beta, two_exp);
 
+    // whee im so free
     free(alpha_int);
     free(two_exp);
 
-    //fprintf(stderr, "[THREAD] target is: ");
-    //byte_print(stderr, target, 32);
+    fprintf(stdout, "[ TARGET ] Target is: ");
+    byte_print(stdout, target, 32);
 
     return target;
 }
 
 BYTE *seed_from_raw(char* raw_seed) {
-    //fprintf(stderr, "[THREAD] Parsing seed: ");
-
     BYTE *seed = hstob(raw_seed, 32);
-    //byte_print(stderr, seed, 32);
-
+    fprintf(stdout, "[ THREAD ] Parsing seed: ");
+    byte_print(stdout, seed, 32);
     return seed;
 }
 
 BYTE *get_x(BYTE* seed, uint64_t solution) {
-    //fprintf(stderr, "[THREAD] Parsing x with solution %lu %lx\n", solution, solution);
+    fprintf(stdout, "[ GET_X ] Parsing x with solution %lu %lx\n", solution, solution);
+
     BYTE *x = malloc(sizeof(BYTE) * 40);
     memcpy(x, seed, 32);
 
@@ -188,14 +273,14 @@ BYTE *get_x(BYTE* seed, uint64_t solution) {
         memcpy(x+32, &solution, 8);
     }
     
-    //fprintf(stderr, "[THREAD] x: ");
-    //byte_print(stderr, x, 40);
+    fprintf(stdout, "[ GET_X ] x: ");
+    byte_print(stdout, x, 40);
 
     return x;
 }
 
 int is_valid_soln(BYTE *target, BYTE* seed, uint64_t solution) {
-    //fprintf(stderr, "[THREAD] checking if cat is valid\n");
+    fprintf(stdout, "[ CHCKSOLN ] Checking..\n");
 
     BYTE *x = get_x(seed, solution);
 	BYTE buf[SHA256_BLOCK_SIZE];
@@ -210,11 +295,8 @@ int is_valid_soln(BYTE *target, BYTE* seed, uint64_t solution) {
 	sha256_update(&ctx, buf, SHA256_BLOCK_SIZE);
 	sha256_final(&ctx, buf);
 
-    //fprintf(stderr, "[THREAD] y: ");
-    //byte_print(stderr, buf, 32);
-
-    //fprintf(stderr, "[THREAD] t: ");
-    //byte_print(stderr, target, 32);
+    fprintf(stdout, "[ CHCKSOLN ] y: ");
+    byte_print(stdout, buf, 32);
 
     return sha256_compare(buf, target);
 }

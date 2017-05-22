@@ -12,7 +12,7 @@ CFLAGS = -Wall -Wextra -std=gnu99 -g
 
 LIB = -lm -pthread
 HDR = driver.h netsock.h handler.h handler_helper.h threads.h sha256.h logger.h
-SRC = driver.c netsock.c handler.c handler_helper.c threads.c sha256.c logger.c
+SRC = driver.c netsock.c handler.c handler_helper.c threads.c sha256.c logger.c work_handler.c
 OBJ = $(SRC:.c=.o)
 
 EXE = server

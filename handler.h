@@ -11,23 +11,18 @@
 #ifndef HANDLER
 #define HANDLER
 
-// simple starting point for a command length
-#define INIT_CMD_STR_SIZE 128
-
-// maximum number of concurrent threads a client can have
-#define CLIENT_THREAD_COUNT 42 // answer to the universe
-
-// maximum number of threads used to calculate work for the client
-#define WORKER_COUNT_MAX 10
-#define CONCURRENT_WORK_COUNT 10
-
 #include "handler_helper.h"
 #include <semaphore.h>
 
-typedef struct queue {
-    int thread_id;
-    struct queue *next;
-} queue_t;
+// Simple starting point for a command length
+#define INIT_CMD_STR_SIZE 128
+
+// maximum number of concurrent threads a client can have
+// Using the answer to the universe >:)
+#define CLIENT_THREAD_COUNT 42 
+
+// maximum number of concurrent work processing for each client
+#define CONCURRENT_WORK_COUNT 10
 
 typedef struct {
     int *newsockfd;
@@ -89,8 +84,5 @@ void soln_handler(worker_arg_t *);
 void unkn_handler(worker_arg_t *);
 void slep_handler(worker_arg_t *);
 
-int get_tid(queue_t **, pthread_mutex_t*);
-void push_tid(queue_t **queue, pthread_mutex_t *mutex, int tid);
-void rm_tid(queue_t **queue, pthread_mutex_t *mutex);
-
 #endif
+
