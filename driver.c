@@ -32,22 +32,22 @@ int main(int argc, char **argv) {
     char *thread_avail_flags = init_avail_flags(CLIENT_COUNT);
     pthread_t thread_pool[CLIENT_COUNT];
 
-#if !DEBUG
-    fclose(stdout);
-#endif
-
     // server ready!
 	listen(sockfd, CLIENT_COUNT);
 
     char warned = 0;
+#if DEBUG
     int count = 0;
+#endif
     while(1) {
         Sockaddr_in *cli_addr = malloc(sizeof(Sockaddr_in));
         socklen_t clilen = sizeof(*cli_addr);
 
         int *newsockfd = malloc(sizeof(int));
 
-        fprintf(stdout, "[ SERVER ] Waiting for client\n");
+#if DEBUG
+        fprintf(stderr, "[ SERVER ] Waiting for client\n");
+#endif
         if ((*newsockfd = accept(sockfd, (Sockaddr*) cli_addr, &clilen)) < 0) {
             perror("ERROR on accept");
             //exit(EXIT_FAILURE);
@@ -58,7 +58,9 @@ int main(int argc, char **argv) {
         while((i = get_avail_thread(thread_avail_flags, CLIENT_COUNT)) == -1) {
             if(!warned) {
                 warned = 1;
-                fprintf(stdout, "[ SERVER ] Maximum client capacity reached. Waiting for someone to disconnect.\n");
+#if DEBUG
+                fprintf(stderr, "[ SERVER ] Maximum client capacity reached. Waiting for someone to disconnect.\n");
+#endif
             }
             sleep(1);
         };
@@ -66,11 +68,15 @@ int main(int argc, char **argv) {
         // reset flag
         if(warned) {
             warned = 0;
-            fprintf(stdout, "[ SERVER ] Blocked connections now allowed.\n");
+#if DEBUG
+            fprintf(stderr, "[ SERVER ] Blocked connections now allowed.\n");
+#endif
         }
 
         logger_log(cli_addr, *newsockfd, "Connected", 9);
-        fprintf(stdout, "[ SERVER ] Client %d connected, new sock %d\n", i, *newsockfd);
+#if DEBUG
+        fprintf(stderr, "[ SERVER ] Client %d connected, new sock %d\n", i, *newsockfd);
+#endif
 
         // init thread arg
         thread_arg_t *thread_arg = malloc(sizeof(thread_arg_t));
@@ -84,7 +90,9 @@ int main(int argc, char **argv) {
             perror("ERROR creating thread");
         }
 
-        fprintf(stdout, "[ SERVER ] Served %d clients\n", ++count);
+#if DEBUG
+        fprintf(stderr, "[ SERVER ] Served %d clients\n", ++count);
+#endif
     }
 	
     // clean up

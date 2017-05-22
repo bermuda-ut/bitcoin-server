@@ -22,7 +22,7 @@
 #define CLIENT_THREAD_COUNT 42 
 
 // maximum number of concurrent work processing for each client
-#define CONCURRENT_WORK_COUNT 10
+#define CONCURRENT_WORK_COUNT 3
 
 typedef struct {
     int *newsockfd;

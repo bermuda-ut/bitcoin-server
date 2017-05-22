@@ -10,9 +10,10 @@
 #include "netsock.h"
 
 void make_socket(Sockaddr_in *serv_addr, int *sockfd, int portno) {
-    if ((*sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    while ((*sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("ERROR opening socket");
-        exit(EXIT_FAILURE);
+        printf("Failed to open socket. Retrying in 1 second");
+        sleep(1);
     }
 
     bzero((char *) serv_addr, sizeof(*serv_addr));
@@ -24,14 +25,16 @@ void make_socket(Sockaddr_in *serv_addr, int *sockfd, int portno) {
 
 void bind_socket(Sockaddr_in serv_addr, int sockfd) {
     int yes = 1;
-    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
+    while (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
         perror("ERROR set socket option");
-        exit(EXIT_FAILURE);
+        printf("Failed set socket option. Retrying in 1 second");
+        sleep(1);
     } 
 
-    if (bind(sockfd, (Sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) {
+    while (bind(sockfd, (Sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) {
         perror("ERROR on binding");
-        exit(EXIT_FAILURE);
+        printf("Failed bind socket. Retrying in 1 second");
+        sleep(1);
     }
 }
 

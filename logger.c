@@ -46,21 +46,25 @@ int init_logger(Sockaddr_in *svr_info) {
     if(_logger_file == 0) return 0;
 
     char* mode = "Production";
+    char* mode2 = "No Log STDOUT";
 #if DEBUG
     mode = "Debug";
+#endif
+#if LOG_OUTPUT
+    mode2 = "Log STDOUT";
 #endif
 
     fprintf(stdout, "\n\n%s\n\n", _coin_ascii);
     fprintf(stdout, "%s\n\n\n", _svr_ascii);
     fprintf(stdout, "--------------------------------------------------------\n\
  Author     : Max Lee\n\
- Server Mode: %s\n\
+ Server Mode: %s, %s\n\
  Date       : 22/MAY/17\n\
  Multithreaded Bitcoin Server based on CS Project2\n\
  Written in blood and tears, not from this project </3\n\
 \n\
  mirrorstairstudio.com                  mallocsizeof.me\n\
---------------------------------------------------------\n", mode);
+--------------------------------------------------------\n", mode, mode2);
 
     return 1;
 }
@@ -94,14 +98,14 @@ void logger_log(Sockaddr_in* src, int id, char* str, int len) {
     char to_write[42+len];
     bzero(to_write, 42+len);
 
-    sprintf(to_write, "[%02d/%02d/%02d %03d:%02d:%02d] %03d@%-15s:%05d %s\n",
+    sprintf(to_write, "[%02d/%02d/%02d %02d:%02d:%02d] %03d @ %-15s:%05d %s\n",
             timeinfo->tm_mday, timeinfo->tm_mon + 1, timeinfo->tm_year - 100,
             timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec,
             id, ip, port, cpy);
 
 #if LOG_OUTPUT
-    fprintf(stderr, "%s", to_write);
-    fflush(stderr);
+    fprintf(stdout, "%s", to_write);
+    fflush(stdout);
 #endif
 
     fwrite(&to_write, strlen(to_write), 1, _logger_file);
