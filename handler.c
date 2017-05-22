@@ -87,7 +87,7 @@ void *client_handler(void *thread_arg) {
                 // this will never happen
                 sleep(1);
             };
-            fprintf(stderr, "[CLIENT] T%d Command: %s\n", thread_id, cmd);
+            //fprintf(stderr, "[CLIENT] T%d Command: %s\n", thread_id, cmd);
 
             worker_arg_t *worker_arg = malloc(sizeof(worker_arg_t));
             wrapper_arg_t *wrapper_arg = malloc(sizeof(wrapper_arg_t));
@@ -150,7 +150,7 @@ void *client_handler(void *thread_arg) {
             if(changed)
                 cmd[4] = changed;
 
-            fprintf(stderr, "spawning thread\n");
+            //fprintf(stderr, "spawning thread\n");
             pthread_t *cmd_thread = thread_pool + thread_id;
             if((pthread_create(cmd_thread, NULL, handler_wrapper, (void*)wrapper_arg)) < 0) {
                 perror("ERROR creating thread");
@@ -187,6 +187,9 @@ void *handler_wrapper(void *wrapper_arg) {
     arg->worker_func(arg->worker_arg);
 
     reset_flag(flag);
+    free(arg->worker_arg->command_str);
+    free(arg->worker_arg);
+    free(arg);
     //fprintf(stderr, "[WRAPPER] Wrapper exiting..\n");
     return 0;
 }
@@ -253,8 +256,10 @@ void work_handler(worker_arg_t *arg) {
     sscanf(command_str + 5, "%x %s %lx %x", &difficulty, raw_seed, &n, &thread_count);
     difficulty = ntohl(difficulty);
     //n = ntohl(n);
+    /*
     if(thread_count > WORKER_COUNT_MAX)
         thread_count = WORKER_COUNT_MAX;
+    */
 
     uint64_t solution = 0;
     BYTE *target = get_target(difficulty);

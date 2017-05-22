@@ -175,22 +175,16 @@ BYTE *seed_from_raw(char* raw_seed) {
 
 BYTE *get_x(BYTE* seed, uint64_t solution) {
     //fprintf(stderr, "[THREAD] Parsing x with solution %lu %lx\n", solution, solution);
-
     BYTE *x = malloc(sizeof(BYTE) * 40);
     memcpy(x, seed, 32);
 
     if(ntohl(solution) != solution) {
         // little endian
-        BYTE *temp2 = malloc(sizeof(BYTE) * 8);
-
-        memcpy(temp2, &solution, 8);
         for(int i = 0; i < 8; i++) {
-            x[32+i] = temp2[7-i];
+            x[39-i] = (solution >> (8 * i)) & 0xFF;
         }
-
-        free(temp2);
-
     } else {
+        // big endian
         memcpy(x+32, &solution, 8);
     }
     

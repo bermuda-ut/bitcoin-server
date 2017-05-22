@@ -5,7 +5,7 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-19 08:23:11
+#   LastChange: 2017-05-20 19:34:57
 #      History:
 =============================================================================*/
 #include "logger.h"
@@ -25,6 +25,10 @@ int init_logger(Sockaddr_in *svr_info) {
     _logger_fd = fileno(_logger_file);
     _logger_svr_info = svr_info;
     if(_logger_file == 0) return 0;
+
+    char* to_write = "----------BIT COIN SERVER STARTED---------";
+    fwrite(&to_write, strlen(to_write), 1, _logger_file);
+
     return 1;
 }
 
@@ -73,11 +77,11 @@ void logger_log(Sockaddr_in* src, int id, char* str, int len) {
     fwrite(&to_write, strlen(to_write), 1, _logger_file);
     fflush(_logger_file);
 
+    fprintf(stdout, "%s", to_write);
+    fflush(stdout);
 }
 
 /*
-    fprintf(stdout, "%s", to_write);
-    fflush(stdout);
 void *logger_handler(void* logger_arg) {
     pthread_detach(pthread_self());
 

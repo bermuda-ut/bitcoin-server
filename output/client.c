@@ -118,19 +118,16 @@ int main(int argc, char**argv)
 		exit(0);
 	}
 	
-    for(int i = 0; i < 10; i++) {
+    for(int i = 0; i < 12; i++) {
         bzero(buffer,256);
-
         n = read(sockfd,buffer,255);
-        
         if (n < 0)
         {
             perror("ERROR reading from socket");
             exit(0);
         }
+        printf("%s\n",buffer);
     }
-
-	printf("%s\n",buffer);
 
 	return 0;
 }
