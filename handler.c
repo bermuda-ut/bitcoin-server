@@ -43,7 +43,7 @@ void *client_handler(void *thread_arg) {
 
     // client thread init
     char *thread_avail_flags = init_avail_flags(CLIENT_THREAD_COUNT);
-    pthread_t *thread_pool = malloc(sizeof(pthread_t) * CLIENT_THREAD_COUNT);
+    pthread_t thread_pool[CLIENT_THREAD_COUNT];// = malloc(sizeof(pthread_t) * CLIENT_THREAD_COUNT);
 
     queue_t* work_queue = NULL;
     pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;

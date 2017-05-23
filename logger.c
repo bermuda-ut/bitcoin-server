@@ -81,27 +81,29 @@ void close_logger() {
  * */
 void logger_log(Sockaddr_in* src, int id, char* str, int len) {
     char *cpy = malloc(sizeof(char) * strlen(str));
-    strcpy(cpy, str);
-
     struct tm *timeinfo = malloc(sizeof(*timeinfo));
     time_t rawtime;
     time(&rawtime);
+    char to_write[42+len];
+    char* ip = "0.0.0.0";
+    char* to = "<";
+
+    bzero(to_write, 42+len);
+
+    strcpy(cpy, str);
     localtime_r(&rawtime, timeinfo);
 
-    char* ip = "0.0.0.0";
     int port = ntohs(_logger_svr_info->sin_port);
     if(src) {
+        to = "@";
         ip = inet_ntoa(src->sin_addr);
         port = ntohs(src->sin_port);
     }
 
-    char to_write[42+len];
-    bzero(to_write, 42+len);
-
-    sprintf(to_write, "[%02d/%02d/%02d %02d:%02d:%02d] %03d @ %-15s:%05d %s\n",
+    sprintf(to_write, "[%02d/%02d/%02d %02d:%02d:%02d] %03d %s %-15s:%05d %s\n",
             timeinfo->tm_mday, timeinfo->tm_mon + 1, timeinfo->tm_year - 100,
             timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec,
-            id, ip, port, cpy);
+            id, to, ip, port, cpy);
 
 #if LOG_OUTPUT
     fprintf(stdout, "%s", to_write);

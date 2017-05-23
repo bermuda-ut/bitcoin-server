@@ -1,12 +1,11 @@
 /*=============================================================================
 #     FileName: handler.h
-#         Desc:  
+#         Desc: handler definitions
 #       Author: Max Lee
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-19 22:37:00
-#      History:
+#   LastChange: 2017-05-23 04:53:31
 =============================================================================*/
 #ifndef HANDLER
 #define HANDLER
@@ -22,7 +21,7 @@
 #define CLIENT_THREAD_COUNT 42 
 
 // maximum number of concurrent work processing for each client
-#define CONCURRENT_WORK_COUNT 3
+#define CONCURRENT_WORK_COUNT 10
 
 typedef struct {
     int *newsockfd;

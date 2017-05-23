@@ -14,11 +14,6 @@ done
 
 for i in `seq 1 100`;
 do
-    ./client-sl localhost 1234 &
-done 
-
-for i in `seq 1 100`;
-do
     ./client-s2 localhost 1234 &
 done 
 
