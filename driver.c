@@ -12,6 +12,9 @@
 #include "handler.h"
 #include "threads.h"
 #include "logger.h"
+#include <signal.h>
+
+void segfault_handler(int);
 
 int main(int argc, char **argv) {
 	int sockfd, portno;
@@ -21,6 +24,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "ERROR, no port provided\n");
 		exit(EXIT_FAILURE);
 	}
+    signal(SIGSEGV, segfault_handler);
 
     // open socket
 	portno = atoi(argv[1]);
@@ -102,3 +106,10 @@ int main(int argc, char **argv) {
 	return 0; 
 }
 
+void segfault_handler(int signum) {
+   fprintf(stdout, "Segmentation Fault... %d :(\n", signum);
+   fflush(stdout);
+   perror("Error: ");
+
+   exit(EXIT_FAILURE);
+}

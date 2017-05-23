@@ -56,6 +56,7 @@ void work_handler(worker_arg_t *arg) {
         return;
     }
 
+    // need to have a cleaner to clean this shit up
     cleanup_arg.tid_queue = tid_queue;
     cleanup_arg.thread_id = thread_id;
     cleanup_arg.pool_flag = arg->pool_flag;
@@ -71,13 +72,9 @@ void work_handler(worker_arg_t *arg) {
     char raw_seed[64];
     int thread_count;
 
+    // just like.. kinda like SOLN
     sscanf(command_str + 5, "%x %s %lx %x", &difficulty, raw_seed, &n, &thread_count);
     difficulty = ntohl(difficulty);
-    //n = ntohl(n);
-    /*
-    if(thread_count > WORKER_COUNT_MAX)
-        thread_count = WORKER_COUNT_MAX;
-    */
 
     uint64_t solution = 0;
     BYTE *target = get_target(difficulty);
@@ -89,14 +86,18 @@ void work_handler(worker_arg_t *arg) {
     cleanup_arg.btches = &btches;
     cleanup_arg.thread_count = thread_count;
 
-    //fprintf(stderr, "[THREAD] Worker %d waiting for %s\n", thread_id, command_str);
+#if DEBUG
+    fprintf(stderr, "[ WORKMAN ] Worker %d waiting for %s\n", thread_id, command_str);
+#endif
+
+    // only X number of workers can concurrently process their stuff
     sem_wait(worker_sem);
-    //fprintf(stderr, "[THREAD] Worker %d is now processing %s\n", thread_id, command_str);
+#if DEBUG
+    fprintf(stderr, "[ WORKMAN ] Worker %d is now processing %s\n", thread_id, command_str);
+#endif
 
     uint64_t chunk = (UINT64_MAX - n) / thread_count;
 
-    //fprintf(stderr, "n is %lu %lx\n", n, n);
-    //fprintf(stderr, "chunk size is %lu\n", chunk);
     for(int i = 0; i < thread_count; i++) {
         btch_args[i].solution = &solution;
         btch_args[i].target = target;
@@ -104,8 +105,9 @@ void work_handler(worker_arg_t *arg) {
         btch_args[i].cancelled = &cancelled;
         btch_args[i].sol_mutex = &sol_mutex;
         btch_args[i].btch_id = i;
-        btch_args[i].start = n + i * chunk;
 
+        // allocate working space for the thread
+        btch_args[i].start = n + i * chunk;
         if(i == thread_count - 1)
             btch_args[i].end = UINT64_MAX;
         else
@@ -114,36 +116,52 @@ void work_handler(worker_arg_t *arg) {
         if((pthread_create(btches + i, NULL, work_btch, (void*)(btch_args + i))) < 0) {
             perror("ERROR creating thread");
         }
-        //fprintf(stdout, "[THREAD] Workerbtch made %lu\n", btches[i]);
+#if DEBUG
+        fprintf(stdout, "[ WORKMAN ] Made workbtch at %lu\n", btches[i]);
+#endif
     }
 
     while(solution == 0) {
-        //fprintf(stdout, "[THREAD] Waiting for solution..\n");
+#if DEBUG
+        fprintf(stderr, "[ WORKMAN ] Waiting for solution..\n");
+#endif
         sleep(1);
     }
 
-    int curr;
-    while((curr = get_tid(tid_queue, queue_mutex)) != thread_id) {
-        fprintf(stderr, "[THREAD] Worker %d is waiting for its turn, current is %d\n", thread_id, curr);
-        sleep(1);
-    }
+#if DEBUG
+    fprintf(stderr, "[ WORKMAN ] Solution found!\n");
+#endif
+
     sem_post(worker_sem);
 
+    // Now wait for its turn to send the message :)
+    int curr;
+    while((curr = get_tid(tid_queue, queue_mutex)) != thread_id) {
+#if DEBUG
+        fprintf(stderr, "[ WORKMAN ] Worker %d is waiting for its turn, current is %d\n", thread_id, curr);
+#endif
+        sleep(1);
+    }
+
     pthread_mutex_lock(arg->worker_mutex);
-    //fprintf(stdout, "[THREAD] Solution found!\n");
+
     char* result = malloc(sizeof(char) * 98);
     char print_seed[65];
     bzero(print_seed, 65);
     memcpy(print_seed, raw_seed, 64);
     difficulty = htonl(difficulty);
     sprintf(result, "SOLN %08x %s %016lx\r\n", difficulty, print_seed, solution);
-    //fprintf(stdout, "[THREAD] Sending!\n");
+#if DEBUG
+    fprintf(stderr, "[ WORKMAN ] Sending result!\n");
+#endif
     send_message(newsockfd, result, 97);
+
     pthread_mutex_unlock(arg->worker_mutex);
 
-    //fprintf(stderr, "[THREAD] Worker %d cleaning up\n", thread_id);
+#if DEBUG
+    fprintf(stderr, "[ WORKMAN ] Worker %d cleaning up\n", thread_id);
+#endif
     pthread_cleanup_pop(1);
-    //fprintf(stderr, "[THREAD] Worker %d exiting\n", thread_id);
 }
 
 void *work_btch(void *btch_arg) {
@@ -157,28 +175,33 @@ void *work_btch(void *btch_arg) {
     int *cancelled = arg->cancelled;
 
     uint64_t trying = start;
-    //fprintf(stderr, "thread trying from %lu to %lu (inclusive)\n", start, end);
+#if DEBUG
+    fprintf(stderr, "[ WORKBTCH ] Btch trying from %lu to %lu (inclusive)\n", start, end);
+#endif
+
     while(1) {
-        //fprintf(stderr, "trying %lu\n",trying);
         int res;
 
         if(*cancelled || trying >= end)
             break;
 
         if((res = is_valid_soln(target, seed, trying)) == -1) {
-            //fprintf(stderr, "[WORKBTCH] Solution found %lu\n", trying);
+#if DEBUG
+            fprintf(stderr, "[ WORKBTCH ] Solution found %lu\n", trying);
+#endif
             pthread_mutex_lock(mutex);
             *solution = trying;
+            // kill siblings.. :(
             *cancelled = 1;
             break;
-        //} else {
-            //fprintf(stderr, "[WORKBTCH] Attempted.. Retrying in 1 second\n");
         }
 
         trying += 1;
     }
 
-    //fprintf(stderr, "[WORKBTCH] Work bitch %d is now dying\n", arg->btch_id);
+#if DEBUG
+    fprintf(stderr, "[ WORKBTCH ] Workbtch %d is now dying\n", arg->btch_id);
+#endif
     return 0;
 }
 

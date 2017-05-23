@@ -19,10 +19,10 @@
 // maximum number of concurrent threads a client can have
 // Using the answer to the universe >:)
 // In real servers, you wouldn't have such high values
-#define CLIENT_THREAD_COUNT 42 
+#define CLIENT_THREAD_COUNT 42
 
 // maximum number of concurrent work processing for each client
-#define CONCURRENT_WORK_COUNT 10
+#define CONCURRENT_WORK_COUNT 5
 
 typedef struct {
     int *newsockfd;

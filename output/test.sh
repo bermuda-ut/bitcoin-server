@@ -6,6 +6,10 @@
 ./client-s3 localhost 1234 &
 ./client-sl localhost 1234 &
 
+for i in `seq 1 100`;
+do
+    ./client-p localhost 1234 &
+done 
 
 for i in `seq 1 100`;
 do
