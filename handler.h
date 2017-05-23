@@ -18,6 +18,7 @@
 
 // maximum number of concurrent threads a client can have
 // Using the answer to the universe >:)
+// In real servers, you wouldn't have such high values
 #define CLIENT_THREAD_COUNT 42 
 
 // maximum number of concurrent work processing for each client
@@ -58,6 +59,8 @@ typedef struct {
 
 typedef struct {
     pthread_t **btches;
+    pthread_t *thread_pool;
+    char *pool_flag;
     int thread_count;
     int thread_id;
     int *cancelled;

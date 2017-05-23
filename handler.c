@@ -157,7 +157,7 @@ void *client_handler(void *thread_arg) {
             // spawn handler in wrapper
             pthread_t *cmd_thread = thread_pool + thread_id;
 #if DEBUG
-            fprintf(stderr, "[ CLIENT %02d ] thread making at %d cleaning up..\n", client_id, thread_id);
+            fprintf(stderr, "[ CLIENT %02d ] Making thread at %d %p\n", client_id, thread_id, cmd_thread);
 #endif
             if((pthread_create(cmd_thread, NULL, handler_wrapper, (void*)wrapper_arg)) < 0) {
                 perror("ERROR creating thread");
@@ -172,9 +172,13 @@ void *client_handler(void *thread_arg) {
 #if DEBUG
     fprintf(stderr, "[ CLIENT %02d ] Client thread cleaning up..\n", client_id);
 #endif
-    for(int i = 0; i < CLIENT_THREAD_COUNT; i++)
-        if(thread_avail_flags[i] == 1)
+
+    for(int i = 0; i < CLIENT_THREAD_COUNT; i++) {
+        if(thread_avail_flags[i] == 1) {
             pthread_cancel(thread_pool[i]);
+            pthread_join(thread_pool[i], NULL);
+        }
+    }
 
     free(recv_str_len);
     free(recv_used_len);
@@ -193,17 +197,17 @@ void *client_handler(void *thread_arg) {
  * cleanups
  */
 void *handler_wrapper(void *wrapper_arg) {
-    pthread_detach(pthread_self());
+    //pthread_detach(pthread_self());
     wrapper_arg_t *arg = (wrapper_arg_t*) wrapper_arg;
     char *flag = arg->flag;
 
     arg->worker_func(arg->worker_arg);
 
-    reset_flag(flag);
     free(arg->worker_arg->command_str);
     free(arg->worker_arg);
     free(arg);
 
+    reset_flag(flag);
     return 0;
 }
 
@@ -213,7 +217,7 @@ void *handler_wrapper(void *wrapper_arg) {
 void abrt_handler(worker_arg_t *arg) {
     queue_t **tid_queue = arg->work_queue;
     pthread_t *thread_pool = arg->thread_pool;
-    char *pool_flag = arg->pool_flag;
+    //char *pool_flag = arg->pool_flag;
     //pthread_mutex_t *queue_mutex = arg->queue_mutex;
 
 #if DEBUG
@@ -224,7 +228,7 @@ void abrt_handler(worker_arg_t *arg) {
     queue_t *curr = *tid_queue;
     while(curr) {
         pthread_cancel(thread_pool[curr->thread_id]);
-        reset_flag(pool_flag + curr->thread_id);
+        //reset_flag(pool_flag + curr->thread_id);
         curr = curr->next;
         count++;
     }

@@ -14,15 +14,17 @@
 
 void work_handler_cleanup(void* cleanup_arg) {
     cleanup_arg_t *arg = (cleanup_arg_t*) cleanup_arg;
-    //fprintf(stderr, "[THREAD] Cleanup: %d btches remain\n", arg->thread_count);
+#if DEBUG
+    fprintf(stderr, "[ CLEANUP ] Cleanup: %d btches remain\n", arg->thread_count);
+#endif
 
+    // cancel work btches
     *(arg->cancelled) = 1;
 
     queue_t **tid_queue = arg->tid_queue;
     pthread_mutex_t *mutex = arg->queue_mutex;
     int thread_id = arg->thread_id;
 
-    //fprintf(stderr, "[THREAD] tid cleanup, thread is %d\n", thread_id);
     while(get_tid(tid_queue, mutex) != thread_id) {
         //fprintf(stderr, "Waiting for current pid \n");
         sleep(1);
@@ -30,11 +32,13 @@ void work_handler_cleanup(void* cleanup_arg) {
 
     rm_tid(tid_queue, mutex);
 
-    //fprintf(stderr, "[THREAD] Finish cleanup thread %d\n", thread_id);
+    reset_flag(arg->pool_flag + thread_id);
+#if DEBUG
+    fprintf(stderr, "[ CLEANUP ] Finish cleanup thread %d\n", thread_id);
+#endif
 }
 
 void work_handler(worker_arg_t *arg) {
-    //fprintf(stderr, "[WORKER] worker spawned\n");
     int cancelled = 0;
     int thread_id = arg->thread_id;
     int *newsockfd = arg->newsockfd;
@@ -44,8 +48,17 @@ void work_handler(worker_arg_t *arg) {
     sem_t *worker_sem = arg->worker_sem;
     cleanup_arg_t cleanup_arg;
 
+    if(strlen(command_str) != 98) {
+#if DEBUG
+        fprintf(stderr, "[ WORKMAN ] Invalid work!\n");
+#endif
+        send_formatted(newsockfd, "ERRO", "Not a valid work");
+        return;
+    }
+
     cleanup_arg.tid_queue = tid_queue;
     cleanup_arg.thread_id = thread_id;
+    cleanup_arg.pool_flag = arg->pool_flag;
     cleanup_arg.queue_mutex = queue_mutex;
     cleanup_arg.cancelled = &cancelled;
     cleanup_arg.btches = NULL;
@@ -131,7 +144,6 @@ void work_handler(worker_arg_t *arg) {
     //fprintf(stderr, "[THREAD] Worker %d cleaning up\n", thread_id);
     pthread_cleanup_pop(1);
     //fprintf(stderr, "[THREAD] Worker %d exiting\n", thread_id);
-    // do shit
 }
 
 void *work_btch(void *btch_arg) {
