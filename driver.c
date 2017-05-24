@@ -18,15 +18,23 @@
  * Good-enough for submission server
  *
  * TODO for production:
+ *
  *  - Balancer that spawns multiple remote instances of the server process
  *    then balances the workload
  *    This would allow us to handle more than CLIENT_COUNT and not overload
  *    one server, and also have client waiting queue that accepts, reads,
  *    and times out clients
+ *
  *  - Proper logger that will not die when terminated
  *    Have a logger thread which will not die until it finishes logging
  *    Need to catch signal SIGTERM and SIGINT, kill all other threads,
  *    wait for logger threads, then exit()
+ *
+ *  - Under mega stress load (10k clients trying to connect),
+ *    for some reason, client threads are 'stuck' at read() 
+ *    and we have processed the client command 
+ *    but client is waiting for our message.
+ *    No clue why this happens.
  */
 int main(int argc, char **argv) {
 	int sockfd, portno;

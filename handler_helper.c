@@ -5,7 +5,7 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-22 22:28:17
+#   LastChange: 2017-05-24 17:21:42
 =============================================================================*/
 #include "handler_helper.h"
 #include "sha256.h"
@@ -30,6 +30,7 @@ BYTE BYTE_TWO[] = {
 
 // aka pop head from queue
 void rm_tid(queue_t **queue, pthread_mutex_t *mutex) {
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
     pthread_mutex_lock(mutex);
 
     if(*queue != NULL) {
@@ -39,10 +40,12 @@ void rm_tid(queue_t **queue, pthread_mutex_t *mutex) {
     }
 
     pthread_mutex_unlock(mutex);
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 }
 
 // aka push tail to queue
 void push_tid(queue_t **queue, pthread_mutex_t *mutex, int tid) {
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
     pthread_mutex_lock(mutex);
 
     queue_t *curr = *queue;
@@ -60,16 +63,19 @@ void push_tid(queue_t **queue, pthread_mutex_t *mutex, int tid) {
     }
 
     pthread_mutex_unlock(mutex);
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 }
 
 // aka read head
 int get_tid(queue_t **queue, pthread_mutex_t *mutex) {
     int val = -1;
 
-    pthread_mutex_lock(mutex);
+    (void)*mutex; // lol
+
+    //pthread_mutex_lock(mutex);
     if(*queue != NULL)
         val = (*queue)->thread_id;
-    pthread_mutex_unlock(mutex);
+    //pthread_mutex_unlock(mutex);
 
     return val;
 }
@@ -87,6 +93,15 @@ void print_queue(queue_t *q) {
 
 //==============================================================================
 
+int has_command(char** full_cmd_str, int *used_len) {
+    for(int i = 0; i < *used_len - 1; i++) {
+        if((*full_cmd_str)[i] == '\r' && (*full_cmd_str)[i+1] == '\n') {
+            return 1;
+        }
+    }
+
+    return 0;
+}
 /**
  * try to get command from existing string
  * command = something that ends with \r\n

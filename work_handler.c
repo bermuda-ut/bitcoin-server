@@ -5,7 +5,7 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-24 15:28:40
+#   LastChange: 2017-05-24 17:16:42
 =============================================================================*/
 #include "handler.h"
 #include "threads.h"
@@ -19,10 +19,7 @@ void work_handler_cleanup(void* cleanup_arg) {
 #endif
 
     // cancel work btches
-    /*
     *(arg->cancelled) = 1;
-    */
-
     if(arg->btches) {
         pthread_t* btches = *(arg->btches);
         for(int i = 0; i < arg->thread_count; i++) {
@@ -48,20 +45,19 @@ void work_handler_cleanup(void* cleanup_arg) {
 
     while(get_tid(tid_queue, mutex) != thread_id) {
 #if DEBUG
-        fprintf(stderr, "[ CLEANUP ]Waiting for current pid \n");
+        fprintf(stderr, "[ CLEANUP ] Waiting for current pid \n");
 #endif
         sleep(1);
     }
 
-    rm_tid(tid_queue, mutex);
+    free(arg->cancelled);
 
+    rm_tid(tid_queue, mutex);
 #if DEBUG
     fprintf(stderr, "[ CLEANUP ] Removed TID for %d\n", thread_id);
 #endif
 
-    free(arg->cancelled);
     reset_flag(arg->pool_flag + thread_id, arg->thread_pool_mutex);
-
 #if DEBUG
     fprintf(stderr, "[ CLEANUP ] Resetted flag for %d\n", thread_id);
 #endif
@@ -237,7 +233,7 @@ void *work_btch(void *btch_arg) {
     }
 
 #if DEBUG
-    fprintf(stderr, "[ WORKBTCH ] Workbtch %d is now dying\n", arg->btch_id);
+    fprintf(stderr, "[ WORKBTCH ] Workbtch %d is now dying by itself\n", arg->btch_id);
 #endif
     return 0;
 }

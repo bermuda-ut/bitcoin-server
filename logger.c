@@ -5,7 +5,7 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-24 15:27:21
+#   LastChange: 2017-05-24 17:24:56
 =============================================================================*/
 #include "logger.h"
 #include <stdio.h>
@@ -21,9 +21,9 @@ Sockaddr_in *_logger_svr_info;
 
 const char* _coin_ascii = "                     ______________\n\
         __,.,---'''''              '''''---..._\n\
-     ,-'             .:::::..:::::.            '`-.\n\
-    |             ''::     ::     ::''            |\n\
-    |            '':::.....::.....:::''           |\n\
+     ,-'             ,:::::,,:::::,           '`-.\n\
+    |             ''::     ::     ::''           |\n\
+    |            '':::.....::....,:::''           |\n\
     |'-.._        ````````````````````       __,,-|\n\
      '-.._''`---.....______________.....---''__,,-\n\
           ''`---.....______________.....---''";
@@ -38,7 +38,7 @@ const char* _svr_ascii =
  * Initialize logger
  * */
 int init_logger(Sockaddr_in *svr_info) {
-    _logger_file = fopen("log.txt", "a+");
+    _logger_file = fopen("log.txt", "w");
     _logger_fd = fileno(_logger_file);
     _logger_svr_info = svr_info;
 

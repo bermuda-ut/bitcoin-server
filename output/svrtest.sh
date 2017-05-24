@@ -9,6 +9,7 @@ do
     ./d localhost "$1" > /dev/null &
     ./efgh localhost "$1" > /dev/null &
     ./i localhost "$1" > /dev/null &
-    ./jk localhost "$1" > /dev/null &
-    sleep 45
+    #./jk localhost "$1" > /dev/null &
+    sleep 3
+    ps
 done

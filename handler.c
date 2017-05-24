@@ -59,29 +59,30 @@ void *client_handler(void *thread_arg) {
         fprintf(stderr, "[ CLIENT %02d ] Waiting for client input\n", client_id);
 #endif
 
-        if ((n = read(*newsockfd, buffer, BUFFER_LEN-1)) < 0) {
+        if(!has_command(recieved_string, recv_used_len)) {
+            if ((n = read(*newsockfd, buffer, BUFFER_LEN-1)) < 0) {
 #if DEBUG
-            perror("[ CLIENT ] ERROR reading from socket");
+                perror("[ CLIENT ] ERROR reading from socket");
 #endif
-            break;
+                break;
 
-        } else if(n == 0) {
-            // end of file
-            logger_log(args->addr, *newsockfd, "Disconnected", 12);
+            } else if(n == 0) {
+                // end of file
+                logger_log(args->addr, *newsockfd, "Disconnected", 12);
 #if DEBUG
-            fprintf(stderr, "[ CLIENT %02d ] Client disconnected\n", client_id);
+                fprintf(stderr, "[ CLIENT %02d ] Client disconnected\n", client_id);
 #endif
-            break;
+                break;
+            }
+            join_client_command(recieved_string, buffer, recv_str_len, recv_used_len);
         }
-
-        join_client_command(recieved_string, buffer, recv_str_len, recv_used_len);
 
         if(check_avail_thread(thread_avail_flags, CLIENT_COUNT, &thread_pool_mutex) == 0) {
 #if DEBUG
             fprintf(stderr, "[ CLIENT %02d ] Client has reached maximum thread limit. Not parsing commands until a thread becomes available.\n", client_id);
 #endif
             sleep(1);
-            continue;
+            //continue;
         }
 
         while((cmd = get_command(recieved_string, *recv_str_len, recv_used_len)) != NULL) {
@@ -91,7 +92,9 @@ void *client_handler(void *thread_arg) {
 
 
             while((thread_id = get_avail_thread(thread_avail_flags, CLIENT_COUNT, &thread_pool_mutex)) == -1) {
-                // this will never happen
+#if DEBUG
+            fprintf(stderr, "[ CLIENT %02d ] Client has reached maximum thread limit. Not parsing commands until a thread becomes available.\n", client_id);
+#endif
                 sleep(1);
             };
 

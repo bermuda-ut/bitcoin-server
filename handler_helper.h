@@ -23,6 +23,7 @@ typedef struct queue {
 // parsing commands
 extern char* get_command(char** full_cmd_str, int len, int *used_len);
 extern void join_client_command(char **str, char *command_str, int *str_len, int* used_len);
+extern int has_command(char** full_cmd_str, int *used_len);
 
 // for solution stuff
 extern int is_valid_soln(BYTE *target, BYTE* seed, uint64_t solution);
