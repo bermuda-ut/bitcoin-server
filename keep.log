@@ -1,0 +1,26 @@
+static const double one;
+---Type <return> to continue, or q <return> to quit---q
+Quit
+(gdb) info locals
+stackaddr = <optimised out>
+iattr = <optimised out>
+default_attr = {schedparam = {__sched_priority = 0}, schedpolicy = 0, flags = 0, guardsize = 4096, stackaddr = 0x0, stacksize = 8388608, cpuset = 0x0, cpusetsize = 0}
+free_cpuset = <optimised out>
+pd = 0x7fe3397e1700
+retval = <optimised out>
+self = <optimised out>
+thread_ran = true
+__PRETTY_FUNCTION__ = "__pthread_create_2_1"
+(gdb) where
+#0  __pthread_create_2_1 (newthread=newthread@entry=0x7fffffffd810, attr=attr@entry=0x0, start_routine=<optimised out>, arg=<optimised out>) at pthread_create.c:713
+#1  0x0000000000401669 in main (argc=<optimised out>, argv=<optimised out>) at driver.c:95
+(gdb) list
+708 in pthread_create.c
+(gdb) Quit
+(gdb) quit
+A debugging session is active.
+
+    Inferior 1 [process 13932] will be killed.
+
+    Quit anyway? (y or n) y
+

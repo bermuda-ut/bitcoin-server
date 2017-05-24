@@ -11,8 +11,8 @@
 
 void make_socket(Sockaddr_in *serv_addr, int *sockfd, int portno) {
     while ((*sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        perror("ERROR opening socket");
-        printf("Failed to open socket. Retrying in 1 second");
+        perror("[ SOCKET ] ERROR opening socket");
+        printf("[ SOCKET ] Failed to open socket. Retrying in 1 second");
         sleep(1);
     }
 
@@ -26,13 +26,13 @@ void make_socket(Sockaddr_in *serv_addr, int *sockfd, int portno) {
 void bind_socket(Sockaddr_in serv_addr, int sockfd) {
     int yes = 1;
     while (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
-        perror("ERROR set socket option");
-        printf("Failed set socket option. Retrying in 1 second");
+        perror("[ SOCKET ] ERROR set socket option");
+        printf("[ SOCKET ] Failed set socket option. Retrying in 1 second");
         sleep(1);
     } 
 
     while (bind(sockfd, (Sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) {
-        perror("ERROR on binding");
+        perror("[ SOCKET ] ERROR on binding");
         printf("Failed bind socket. Retrying in 1 second");
         sleep(1);
     }

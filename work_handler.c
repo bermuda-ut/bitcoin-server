@@ -5,7 +5,7 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-22 21:49:11
+#   LastChange: 2017-05-24 15:28:40
 =============================================================================*/
 #include "handler.h"
 #include "threads.h"
@@ -19,27 +19,56 @@ void work_handler_cleanup(void* cleanup_arg) {
 #endif
 
     // cancel work btches
+    /*
     *(arg->cancelled) = 1;
+    */
+
+    if(arg->btches) {
+        pthread_t* btches = *(arg->btches);
+        for(int i = 0; i < arg->thread_count; i++) {
+            if(*(btches+i)) {
+                pthread_cancel(*(btches+i));
+                pthread_join(*(btches+i), NULL);
+            }
+#if DEBUG
+            fprintf(stderr, "[ CLEANUP ] Cleanup: %d btches remain\n", arg->thread_count - i - 1);
+#endif
+        }
+        free(*(arg->btches));
+    }
+
+    if(arg->btch_args)
+        free(arg->btch_args);
+    if(arg->sol_mutex)
+        free(arg->sol_mutex);
 
     queue_t **tid_queue = arg->tid_queue;
     pthread_mutex_t *mutex = arg->queue_mutex;
     int thread_id = arg->thread_id;
 
     while(get_tid(tid_queue, mutex) != thread_id) {
-        //fprintf(stderr, "Waiting for current pid \n");
+#if DEBUG
+        fprintf(stderr, "[ CLEANUP ]Waiting for current pid \n");
+#endif
         sleep(1);
     }
 
     rm_tid(tid_queue, mutex);
 
-    reset_flag(arg->pool_flag + thread_id);
 #if DEBUG
-    fprintf(stderr, "[ CLEANUP ] Finish cleanup thread %d\n", thread_id);
+    fprintf(stderr, "[ CLEANUP ] Removed TID for %d\n", thread_id);
+#endif
+
+    free(arg->cancelled);
+    reset_flag(arg->pool_flag + thread_id, arg->thread_pool_mutex);
+
+#if DEBUG
+    fprintf(stderr, "[ CLEANUP ] Resetted flag for %d\n", thread_id);
 #endif
 }
 
 void work_handler(worker_arg_t *arg) {
-    int cancelled = 0;
+    int *cancelled = malloc(sizeof(int));
     int thread_id = arg->thread_id;
     int *newsockfd = arg->newsockfd;
     char *command_str = arg->command_str;
@@ -47,24 +76,21 @@ void work_handler(worker_arg_t *arg) {
     pthread_mutex_t *queue_mutex = arg->queue_mutex;
     sem_t *worker_sem = arg->worker_sem;
     cleanup_arg_t cleanup_arg;
-
-    if(strlen(command_str) != 98) {
-#if DEBUG
-        fprintf(stderr, "[ WORKMAN ] Invalid work!\n");
-#endif
-        send_formatted(newsockfd, "ERRO", "Not a valid work");
-        return;
-    }
+    *cancelled = 0;
 
     // need to have a cleaner to clean this shit up
     cleanup_arg.tid_queue = tid_queue;
     cleanup_arg.thread_id = thread_id;
     cleanup_arg.pool_flag = arg->pool_flag;
+    cleanup_arg.thread_pool_mutex = arg->thread_pool_mutex;
     cleanup_arg.queue_mutex = queue_mutex;
-    cleanup_arg.cancelled = &cancelled;
+    cleanup_arg.cancelled = cancelled;
     cleanup_arg.btches = NULL;
+    cleanup_arg.btch_args = NULL;
     cleanup_arg.thread_count = 0;
     cleanup_arg.worker_sem = worker_sem;
+    cleanup_arg.sol_mutex = NULL;
+
     pthread_cleanup_push(work_handler_cleanup, (void*)&cleanup_arg);
 
     uint32_t difficulty;
@@ -79,12 +105,16 @@ void work_handler(worker_arg_t *arg) {
     uint64_t solution = 0;
     BYTE *target = get_target(difficulty);
     BYTE *seed = seed_from_raw(raw_seed);
-    pthread_mutex_t sol_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t *sol_mutex = malloc(sizeof(pthread_mutex_t));
+    pthread_mutex_init(sol_mutex, NULL);
+    cleanup_arg.sol_mutex = sol_mutex;
 
     pthread_t *btches = malloc(sizeof(pthread_t) * thread_count);
-    btch_arg_t btch_args[thread_count];
+    btch_arg_t *btch_args = malloc(sizeof(btch_arg_t) * thread_count);
     cleanup_arg.btches = &btches;
+    cleanup_arg.btch_args = btch_args;
     cleanup_arg.thread_count = thread_count;
+    bzero(btches, sizeof(pthread_t) * thread_count);
 
 #if DEBUG
     fprintf(stderr, "[ WORKMAN ] Worker %d waiting for %s\n", thread_id, command_str);
@@ -102,8 +132,8 @@ void work_handler(worker_arg_t *arg) {
         btch_args[i].solution = &solution;
         btch_args[i].target = target;
         btch_args[i].seed = seed;
-        btch_args[i].cancelled = &cancelled;
-        btch_args[i].sol_mutex = &sol_mutex;
+        btch_args[i].cancelled = cancelled;
+        btch_args[i].sol_mutex = sol_mutex;
         btch_args[i].btch_id = i;
 
         // allocate working space for the thread
@@ -113,6 +143,7 @@ void work_handler(worker_arg_t *arg) {
         else
             btch_args[i].end = n + (i + 1) * chunk;
 
+        pthread_testcancel();
         if((pthread_create(btches + i, NULL, work_btch, (void*)(btch_args + i))) < 0) {
             perror("ERROR creating thread");
         }
@@ -144,6 +175,7 @@ void work_handler(worker_arg_t *arg) {
     }
 
     pthread_mutex_lock(arg->worker_mutex);
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
     char* result = malloc(sizeof(char) * 98);
     char print_seed[65];
@@ -156,6 +188,7 @@ void work_handler(worker_arg_t *arg) {
 #endif
     send_message(newsockfd, result, 97);
 
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     pthread_mutex_unlock(arg->worker_mutex);
 
 #if DEBUG
@@ -165,6 +198,7 @@ void work_handler(worker_arg_t *arg) {
 }
 
 void *work_btch(void *btch_arg) {
+    //pthread_detach(pthread_self());
     btch_arg_t *arg = (btch_arg_t*) btch_arg;
     BYTE* target = arg->target;
     BYTE* seed = arg->seed;
@@ -179,20 +213,23 @@ void *work_btch(void *btch_arg) {
     fprintf(stderr, "[ WORKBTCH ] Btch trying from %lu to %lu (inclusive)\n", start, end);
 #endif
 
-    while(1) {
+    while(*solution == 0) {
         int res;
 
         if(*cancelled || trying >= end)
+        //if(trying >= end)
             break;
 
+        //pthread_testcancel();
+        pthread_testcancel();
         if((res = is_valid_soln(target, seed, trying)) == -1) {
 #if DEBUG
             fprintf(stderr, "[ WORKBTCH ] Solution found %lu\n", trying);
 #endif
             pthread_mutex_lock(mutex);
-            *solution = trying;
-            // kill siblings.. :(
-            *cancelled = 1;
+            if(*solution == 0)
+                *solution = trying;
+            pthread_mutex_unlock(mutex);
             break;
         }
 
@@ -204,5 +241,4 @@ void *work_btch(void *btch_arg) {
 #endif
     return 0;
 }
-
 

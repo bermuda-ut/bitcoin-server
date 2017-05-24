@@ -16,8 +16,12 @@
 #include <string.h>
 
 #define DEBUG 0
-#define LOG_OUTPUT 1
+#define LOG_OUTPUT 0
+#define LOG_ONLY_CLIENT 0
+
 #define CLIENT_COUNT 200
 #define BUFFER_LEN 256
+
+void segfault_handler(int);
 
 #endif

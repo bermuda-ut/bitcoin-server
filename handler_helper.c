@@ -175,7 +175,9 @@ void send_message(int *newsockfd, char* to_send, int len) {
     logger_log(NULL, *newsockfd, to_log, len-2);
 
     if ((n = write(*newsockfd, to_send, len)) <= 0) {
-        perror("ERROR writing to socket");
+#if DEBUG
+        perror("[ SENDMSG ] ERROR writing to socket");
+#endif
     }
 }
 
@@ -215,10 +217,12 @@ BYTE *get_target(uint32_t difficulty) {
 
     int *alpha_int = malloc(sizeof(int));
     *alpha_int = (difficulty) & 0xFF;
+    /*
 #if DEBUG
     fprintf(stderr, "[ TARGET ] Calculating target from %x %u\n", difficulty, difficulty);
     fprintf(stderr, "[ TARGET ] Alpha = %d, Alpha - 3 = %d (%x)\n", *alpha_int, *alpha_int - 3, *alpha_int - 3);
 #endif
+    */
 
     // init beta
     BYTE beta[32];
@@ -229,11 +233,13 @@ BYTE *get_target(uint32_t difficulty) {
     beta[30] = (difficulty >> (8*2)) & 0xFF;
     beta[31] = (difficulty >> (8*3)) & 0xFF;
 
+    /*
 #if DEBUG
     fprintf(stderr, "[ TARGET ] Beta is:   ");
     byte_print(stderr, beta, 32);
     fprintf(stderr, "\n");
 #endif
+    */
 
     // init target and exponent for calculation
     BYTE *target = malloc(sizeof(BYTE) * 32);
@@ -248,28 +254,34 @@ BYTE *get_target(uint32_t difficulty) {
     free(alpha_int);
     free(two_exp);
 
+    /*
 #if DEBUG
     fprintf(stderr, "[ TARGET ] Target is: ");
     byte_print(stderr, target, 32);
     fprintf(stderr, "\n");
 #endif
+    */
     return target;
 }
 
 BYTE *seed_from_raw(char* raw_seed) {
     BYTE *seed = hstob(raw_seed, 32);
+    /*
 #if DEBUG
     fprintf(stderr, "[ THREAD ] Parsing seed: ");
     byte_print(stderr, seed, 32);
     fprintf(stderr, "\n");
 #endif
+    */
     return seed;
 }
 
 BYTE *get_x(BYTE* seed, uint64_t solution) {
+    /*
 #if DEBUG
     fprintf(stderr, "[ GET_X ] Parsing x with solution %lu %lx\n", solution, solution);
 #endif
+    */
 
     BYTE *x = malloc(sizeof(BYTE) * 40);
     memcpy(x, seed, 32);
@@ -284,19 +296,23 @@ BYTE *get_x(BYTE* seed, uint64_t solution) {
         memcpy(x+32, &solution, 8);
     }
     
+    /*
 #if DEBUG
     fprintf(stderr, "[ GET_X ] x: ");
     byte_print(stderr, x, 40);
     fprintf(stderr, "\n");
 #endif
+    */
 
     return x;
 }
 
 int is_valid_soln(BYTE *target, BYTE* seed, uint64_t solution) {
+    /*
 #if DEBUG
     fprintf(stderr, "[ CHCKSOLN ] Checking..\n");
 #endif
+    */
 
     BYTE *x = get_x(seed, solution);
 	BYTE buf[SHA256_BLOCK_SIZE];
@@ -311,11 +327,15 @@ int is_valid_soln(BYTE *target, BYTE* seed, uint64_t solution) {
 	sha256_update(&ctx, buf, SHA256_BLOCK_SIZE);
 	sha256_final(&ctx, buf);
 
+    free(x);
+
+    /*
 #if DEBUG
     fprintf(stderr, "[ CHCKSOLN ] y: ");
     byte_print(stderr, buf, 32);
     fprintf(stderr, "\n");
 #endif
+    */
 
     return sha256_compare(buf, target);
 }

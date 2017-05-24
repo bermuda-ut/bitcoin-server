@@ -15,24 +15,39 @@ char *init_avail_flags(int count) {
     return flags;
 }
 
-int get_avail_thread(char* flags, int count) {
+int get_avail_thread(char* flags, int count, pthread_mutex_t* mutex) {
+    int val = -1;
+
+    pthread_mutex_lock(mutex);
     for(int i = 0; i < count; i++) {
         if(flags[i] == 0) {
             flags[i] = 1;
-            return i;
+            val = i;
+            break;
         }
     }
-    return -1;
+    pthread_mutex_unlock(mutex);
+
+    return val;
 }
 
-int check_avail_thread(char* flags, int count) {
+int check_avail_thread(char* flags, int count, pthread_mutex_t* mutex) {
+    int val = -1;
+
+    pthread_mutex_lock(mutex);
     for(int i = 0; i < count; i++) {
         if(flags[i] == 0) {
-            return 1;
+            val = 1;
+            break;
         }
     }
-    return -1;
+    pthread_mutex_unlock(mutex);
+
+    return val;
 }
-void reset_flag(char* flag) {
+
+void reset_flag(char* flag, pthread_mutex_t* mutex) {
+    pthread_mutex_lock(mutex);
     *flag = 0;
+    pthread_mutex_unlock(mutex);
 }

@@ -5,7 +5,7 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-22 22:27:46
+#   LastChange: 2017-05-24 15:27:13
 =============================================================================*/
 #include "handler.h"
 #include "threads.h"
@@ -18,7 +18,7 @@
  */
 void *client_handler(void *thread_arg) {
     // so that server does not need to join later
-    pthread_detach(pthread_self());
+    // pthread_detach(pthread_self());
 
     // init
     thread_arg_t *args = (thread_arg_t*) thread_arg;
@@ -44,6 +44,8 @@ void *client_handler(void *thread_arg) {
     // client thread init
     char *thread_avail_flags = init_avail_flags(CLIENT_THREAD_COUNT);
     pthread_t thread_pool[CLIENT_THREAD_COUNT];// = malloc(sizeof(pthread_t) * CLIENT_THREAD_COUNT);
+    bzero(thread_pool, sizeof(pthread_t) * CLIENT_THREAD_COUNT);
+    pthread_mutex_t thread_pool_mutex = PTHREAD_MUTEX_INITIALIZER;
 
     queue_t* work_queue = NULL;
     pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -58,7 +60,9 @@ void *client_handler(void *thread_arg) {
 #endif
 
         if ((n = read(*newsockfd, buffer, BUFFER_LEN-1)) < 0) {
-            perror("ERROR reading from socket");
+#if DEBUG
+            perror("[ CLIENT ] ERROR reading from socket");
+#endif
             break;
 
         } else if(n == 0) {
@@ -72,7 +76,7 @@ void *client_handler(void *thread_arg) {
 
         join_client_command(recieved_string, buffer, recv_str_len, recv_used_len);
 
-        if(check_avail_thread(thread_avail_flags, CLIENT_COUNT) == 0) {
+        if(check_avail_thread(thread_avail_flags, CLIENT_COUNT, &thread_pool_mutex) == 0) {
 #if DEBUG
             fprintf(stderr, "[ CLIENT %02d ] Client has reached maximum thread limit. Not parsing commands until a thread becomes available.\n", client_id);
 #endif
@@ -81,14 +85,21 @@ void *client_handler(void *thread_arg) {
         }
 
         while((cmd = get_command(recieved_string, *recv_str_len, recv_used_len)) != NULL) {
-            logger_log(args->addr, *newsockfd, cmd, strlen(cmd));
+            int thread_id,
+                orig_len = strlen(cmd);
+            logger_log(args->addr, *newsockfd, cmd, orig_len);
 
-            int thread_id;
 
-            while((thread_id = get_avail_thread(thread_avail_flags, CLIENT_COUNT)) == -1) {
+            while((thread_id = get_avail_thread(thread_avail_flags, CLIENT_COUNT, &thread_pool_mutex)) == -1) {
                 // this will never happen
                 sleep(1);
             };
+
+            // join the dead thread
+            if(thread_pool[thread_id]) {
+                pthread_cancel(thread_pool[thread_id]);
+                pthread_join(thread_pool[thread_id], NULL);
+            }
 
 #if DEBUG
             fprintf(stderr, "[ CLIENT ] Thread: %d\tCommand: %s\n", thread_id, cmd);
@@ -108,7 +119,9 @@ void *client_handler(void *thread_arg) {
             worker_arg->command_str = cmd;
             worker_arg->thread_pool = thread_pool;
             worker_arg->worker_mutex = &worker_mutex;
+            worker_arg->thread_pool_mutex = &thread_pool_mutex;
 
+            wrapper_arg->thread_pool_mutex = &thread_pool_mutex;
             wrapper_arg->flag = thread_avail_flags + thread_id;
             wrapper_arg->worker_arg = worker_arg;
 
@@ -120,28 +133,28 @@ void *client_handler(void *thread_arg) {
             }
 
             // get the right handler
-            if(strcmp("PING", cmd) == 0) {
+            if(strcmp("PING", cmd) == 0 && orig_len == 4) {
                 wrapper_arg->worker_func = ping_handler;
 
-            } else if(strcmp("PONG", cmd) == 0) {
+            } else if(strcmp("PONG", cmd) == 0 && orig_len == 4) {
                 wrapper_arg->worker_func = pong_handler;
 
-            } else if(strcmp("OKAY", cmd) == 0) {
+            } else if(strcmp("OKAY", cmd) == 0 && orig_len == 4) {
                 wrapper_arg->worker_func = okay_handler;
 
-            } else if(strcmp("ERRO", cmd) == 0) {
+            } else if(strcmp("ERRO", cmd) == 0 && orig_len == 4) {
                 wrapper_arg->worker_func = erro_handler;
 
-            } else if(strcmp("SOLN", cmd) == 0) {
+            } else if(strcmp("SOLN", cmd) == 0 && orig_len == 95) {
                 wrapper_arg->worker_func = soln_handler;
 
-            } else if(strcmp("SLEP", cmd) == 0) {
+            } else if(strcmp("SLEP", cmd) == 0 && orig_len == 4) {
                 wrapper_arg->worker_func = slep_handler;
 
-            } else if(strcmp("ABRT", cmd) == 0) {
+            } else if(strcmp("ABRT", cmd) == 0 && orig_len == 4) {
                 wrapper_arg->worker_func = abrt_handler;
 
-            } else if(strcmp("WORK", cmd) == 0) {
+            } else if(strcmp("WORK", cmd) == 0 && orig_len == 98) {
                 wrapper_arg->worker_func = work_handler;
                 push_tid(&work_queue, &queue_mutex, thread_id);
                 //print_queue(work_queue);
@@ -159,8 +172,11 @@ void *client_handler(void *thread_arg) {
 #if DEBUG
             fprintf(stderr, "[ CLIENT %02d ] Making thread at %d %p\n", client_id, thread_id, cmd_thread);
 #endif
+
             if((pthread_create(cmd_thread, NULL, handler_wrapper, (void*)wrapper_arg)) < 0) {
-                perror("ERROR creating thread");
+#if DEBUG
+                perror("[ CLIENT ] ERROR creating thread");
+#endif
             }
         }
     }
@@ -168,6 +184,7 @@ void *client_handler(void *thread_arg) {
     // clean up :)
 
     close(*newsockfd);
+    free(newsockfd);
 
 #if DEBUG
     fprintf(stderr, "[ CLIENT %02d ] Client thread cleaning up..\n", client_id);
@@ -182,12 +199,14 @@ void *client_handler(void *thread_arg) {
 
     free(recv_str_len);
     free(recv_used_len);
+    free(*recieved_string);
     free(recieved_string);
 
 #if DEBUG
     fprintf(stderr, "[ CLIENT %02d ] Client thread dying\n", client_id);
 #endif
-    reset_flag(flags+client_id);
+    reset_flag(flags+client_id, args->client_pool_mutex);
+    free(args);
 
     return 0;
 }
@@ -207,7 +226,7 @@ void *handler_wrapper(void *wrapper_arg) {
     free(arg->worker_arg);
     free(arg);
 
-    reset_flag(flag);
+    reset_flag(flag, arg->thread_pool_mutex);
     return 0;
 }
 
@@ -228,7 +247,6 @@ void abrt_handler(worker_arg_t *arg) {
     queue_t *curr = *tid_queue;
     while(curr) {
         pthread_cancel(thread_pool[curr->thread_id]);
-        //reset_flag(pool_flag + curr->thread_id);
         curr = curr->next;
         count++;
     }
@@ -276,7 +294,7 @@ void unkn_handler(worker_arg_t *arg) {
 #if DEBUG
     fprintf(stderr, "[ THREAD ] Unknown command from %02d. Recieved: %s\n", arg->client_id, arg->command_str);
 #endif
-    send_formatted(arg->newsockfd, "ERRO", "Unknown command");
+    send_formatted(arg->newsockfd, "ERRO", "Unknown command or format");
 }
 
 void erro_handler(worker_arg_t *arg) {
