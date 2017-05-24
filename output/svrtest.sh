@@ -10,6 +10,6 @@ do
     ./efgh localhost "$1" > /dev/null &
     ./i localhost "$1" > /dev/null &
     #./jk localhost "$1" > /dev/null &
-    sleep 3
+    sleep 5
     ps
 done

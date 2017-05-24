@@ -86,7 +86,6 @@ void close_logger() {
  * log into the file, thread safe
  * */
 void logger_log(Sockaddr_in* src, int id, char* str, int len) {
-    pthread_mutex_lock(&_logger_mutex);
     char *cpy = malloc(sizeof(char) * strlen(str));
     struct tm *timeinfo = malloc(sizeof(*timeinfo));
     time_t rawtime;
@@ -130,6 +129,5 @@ void logger_log(Sockaddr_in* src, int id, char* str, int len) {
 
     free(timeinfo);
     free(cpy);
-    pthread_mutex_unlock(&_logger_mutex);
 }
 

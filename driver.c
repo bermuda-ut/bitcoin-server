@@ -15,29 +15,33 @@
 #include <signal.h>
 
 /**
- * Good-enough for submission server
+ * Good-enough for project submission server
  *
  * TODO for production:
  *
  *  - Balancer that spawns multiple remote instances of the server process
  *    then balances the workload
- *    This would allow us to handle more than CLIENT_COUNT and not overload
- *    one server, and also have client waiting queue that accepts, reads,
- *    and times out clients
+ *    This would allow us to handle more than CLIENT_COUNT and balance
+ *    clients according to number of WORK commands
  *
  *  - Proper logger that will not die when terminated
  *    Have a logger thread which will not die until it finishes logging
  *    Need to catch signal SIGTERM and SIGINT, kill all other threads,
  *    wait for logger threads, then exit()
  *
+ *
+ * DONE:
  *  - Under mega stress load (10k clients trying to connect),
  *    for some reason, client threads are 'stuck' at read() 
  *    and we have processed the client command 
  *    but client is waiting for our message.
  *    No clue why this happens.
  *    This does not happen <100 clients.
+ *     > Before, sever queued pending clients.
+ *     > Now server just disconnects them so this issue never occurs :)
  *
  *  - SIGPIPE handling
+ *     > ignore them >:)
  */
 
 int global_work_count = 0;
@@ -49,7 +53,10 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "[SERVER ] ERROR, no port provided\n");
 		exit(EXIT_FAILURE);
 	}
+
+    // custom signal handlers
     signal(SIGSEGV, segfault_handler);
+    signal(SIGPIPE, SIG_IGN);
 
     // open socket
 	portno = atoi(argv[1]);
@@ -87,14 +94,20 @@ int main(int argc, char **argv) {
 
         // Wait for a thread to become available
         int i;
-        while((i = get_avail_thread(thread_avail_flags, CLIENT_COUNT, &client_pool_mutex)) == -1) {
+        if((i = get_avail_thread(thread_avail_flags, CLIENT_COUNT, &client_pool_mutex)) == -1) {
             if(!warned) {
                 warned = 1;
 #if DEBUG
-                fprintf(stderr, "[ SERVER ] Maximum client capacity reached. Waiting for someone to disconnect.\n");
+                fprintf(stderr, "[ SERVER ] Maximum client capacity reached. Refusing connections.\n");
 #endif
             }
-            sleep(1);
+            char* to_log = "Maximum number of clients reached. Disconnecting new client.";
+            logger_log(cli_addr, *newsockfd, to_log, strlen(to_log));
+
+            close(*newsockfd);
+            free(newsockfd);
+            free(cli_addr);
+            continue;
         };
 
         // join the dead thread
