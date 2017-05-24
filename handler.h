@@ -39,6 +39,9 @@ typedef struct {
 
     char *pool_flag;
     sem_t *worker_sem;
+
+    char *cust_head;
+    char *cust_msg;
 } worker_arg_t;
 
 typedef struct {
@@ -90,6 +93,8 @@ void erro_handler(worker_arg_t *);
 void soln_handler(worker_arg_t *);
 void unkn_handler(worker_arg_t *);
 void slep_handler(worker_arg_t *);
+
+void cust_handler(worker_arg_t *);
 
 #endif
 

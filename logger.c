@@ -38,13 +38,20 @@ const char* _svr_ascii =
  * Initialize logger
  * */
 int init_logger(Sockaddr_in *svr_info) {
-    _logger_file = fopen("log.txt", "w");
+    _logger_file = fopen(FILENAME, FILEMODE);
     _logger_fd = fileno(_logger_file);
     _logger_svr_info = svr_info;
 
     // something went wrong
     if(_logger_file == 0) return 0;
 
+    print_welcome(stdout);
+    print_welcome(_logger_file);
+
+    return 1;
+}
+
+void print_welcome(FILE *file) {
     char* mode = "Submission";
     char* mode2 = "Logless STDOUT";
 #if DEBUG
@@ -54,9 +61,9 @@ int init_logger(Sockaddr_in *svr_info) {
     mode2 = "Log STDOUT";
 #endif
 
-    fprintf(stdout, "\n\n%s\n\n", _coin_ascii);
-    fprintf(stdout, "%s\n\n", _svr_ascii);
-    fprintf(stdout, "--------------------------------------------------------\n\
+    fprintf(file, "\n\n%s\n\n", _coin_ascii);
+    fprintf(file, "%s\n\n", _svr_ascii);
+    fprintf(file, "--------------------------------------------------------\n\
  Author     : Max Lee, max@mirrorstairstudio.com\n\
  Server Mode: %s, %s\n\
  Date       : 24/MAY/17\n\n\
@@ -65,9 +72,7 @@ int init_logger(Sockaddr_in *svr_info) {
  \n\
  mirrorstairstudio.com                  mallocsizeof.me\n\
 --------------------------------------------------------\n", mode, mode2);
-    fflush(stdout);
-
-    return 1;
+    fflush(file);
 }
 
 /*

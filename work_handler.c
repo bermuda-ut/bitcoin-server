@@ -13,6 +13,7 @@
 #include "logger.h"
 
 void work_handler_cleanup(void* cleanup_arg) {
+    global_work_count--;
     cleanup_arg_t *arg = (cleanup_arg_t*) cleanup_arg;
 #if DEBUG
     fprintf(stderr, "[ CLEANUP ] Cleanup: %d btches remain\n", arg->thread_count);

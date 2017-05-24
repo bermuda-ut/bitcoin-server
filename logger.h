@@ -12,6 +12,9 @@
 #include "netsock.h"
 #include <time.h>
 
+#define FILENAME "log.txt"
+#define FILEMODE "w"
+
 typedef struct {
     Sockaddr_in *src;
     struct tm *timeinfo;
@@ -24,4 +27,5 @@ extern int init_logger(Sockaddr_in *);
 extern void close_logger();
 
 extern void logger_log(Sockaddr_in* src, int id, char* str, int len);
+void print_welcome(FILE *file);
 #endif

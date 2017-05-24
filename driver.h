@@ -5,7 +5,7 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-09 08:59:54
+#   LastChange: 2017-05-24 18:14:33
 =============================================================================*/
 #ifndef DRIVER
 #define DRIVER
@@ -23,5 +23,10 @@
 #define BUFFER_LEN 256
 
 void segfault_handler(int);
+
+// to meet the spec
+// and probably a good idea to not overload the server.. :)
+#define GLOBAL_WORK_LIMIT 10
+extern int global_work_count;
 
 #endif

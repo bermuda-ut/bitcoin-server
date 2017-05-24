@@ -17,9 +17,6 @@
  * Get client command -> spawn thread to handle that command
  */
 void *client_handler(void *thread_arg) {
-    // so that server does not need to join later
-    // pthread_detach(pthread_self());
-
     // init
     thread_arg_t *args = (thread_arg_t*) thread_arg;
 	char buffer[BUFFER_LEN],
@@ -158,8 +155,16 @@ void *client_handler(void *thread_arg) {
                 wrapper_arg->worker_func = abrt_handler;
 
             } else if(strcmp("WORK", cmd) == 0 && orig_len == 98) {
-                wrapper_arg->worker_func = work_handler;
-                push_tid(&work_queue, &queue_mutex, thread_id);
+                if(global_work_count < GLOBAL_WORK_LIMIT) {
+                    global_work_count++;
+                    wrapper_arg->worker_func = work_handler;
+                    push_tid(&work_queue, &queue_mutex, thread_id);
+
+                } else {
+                    worker_arg->cust_head = "ERRO";
+                    worker_arg->cust_msg = "Server is full of WORK";
+                    wrapper_arg->worker_func = cust_handler;
+                }
                 //print_queue(work_queue);
 
             } else {
@@ -326,6 +331,13 @@ void ping_handler(worker_arg_t *arg) {
     fprintf(stderr, "[ THREAD ] Handling PING for %02d\n", arg->client_id);
 #endif
     send_message(arg->newsockfd, "PONG\r\n", 6);
+}
+
+void cust_handler(worker_arg_t *arg) {
+#if DEBUG
+    fprintf(stderr, "[ THREAD ] Handling custom message for %02d\n", arg->client_id);
+#endif
+    send_formatted(arg->newsockfd, arg->cust_head, arg->cust_msg);
 }
 
 void slep_handler(worker_arg_t *arg) {

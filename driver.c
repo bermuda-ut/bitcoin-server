@@ -5,7 +5,7 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-24 15:29:55
+#   LastChange: 2017-05-24 18:15:18
 =============================================================================*/
 #include "driver.h"
 #include "netsock.h"
@@ -35,7 +35,12 @@
  *    and we have processed the client command 
  *    but client is waiting for our message.
  *    No clue why this happens.
+ *    This does not happen <100 clients.
+ *
+ *  - SIGPIPE handling
  */
+
+int global_work_count = 0;
 int main(int argc, char **argv) {
 	int sockfd, portno;
 	Sockaddr_in serv_addr;
@@ -77,11 +82,10 @@ int main(int argc, char **argv) {
         if ((*newsockfd = accept(sockfd, (Sockaddr*) cli_addr, &clilen)) < 0) {
 #if DEBUG
             perror("[ SERVER ] ERROR on accept");
-            //exit(EXIT_FAILURE);
 #endif
         }
 
-        // wait for a thread to become available
+        // Wait for a thread to become available
         int i;
         while((i = get_avail_thread(thread_avail_flags, CLIENT_COUNT, &client_pool_mutex)) == -1) {
             if(!warned) {
@@ -140,7 +144,7 @@ int main(int argc, char **argv) {
 }
 
 void segfault_handler(int signum) {
-   fprintf(stdout, "Segmentation Fault (%d)\nI hate life.. :(\nKilling myself..\n", signum);
+   fprintf(stdout, "Segmentation Fault (%d)\n  </3  \nGood bye..\n", signum);
    fflush(stdout);
    exit(EXIT_FAILURE);
 }
