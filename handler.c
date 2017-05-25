@@ -5,24 +5,25 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-24 15:27:13
+#   LastChange: 2017-05-25 21:56:58
 =============================================================================*/
 #include "handler.h"
-#include "threads.h"
 #include "driver.h"
 #include "logger.h"
+#include "threads.h"
 
 /**
  * Client handling thread function
  * Get client command -> spawn thread to handle that command
  */
 void *client_handler(void *thread_arg) {
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
     // init
     thread_arg_t *args = (thread_arg_t*) thread_arg;
+
 	char buffer[BUFFER_LEN],
         *cmd,
-        **recieved_string = malloc(sizeof(char*)),
-        *flags = args->flags;
+        **recieved_string = malloc(sizeof(char*)), *flags = args->flags;
 
     int *newsockfd = args->newsockfd,
         client_id = args->i,
@@ -34,21 +35,38 @@ void *client_handler(void *thread_arg) {
     *recv_used_len = 0;
     *recieved_string = malloc(sizeof(char) * *recv_str_len);
 
+    // client thread init
+    char *thread_avail_flags = init_avail_flags(CLIENT_THREAD_COUNT);
+    pthread_t *thread_pool = malloc(sizeof(pthread_t) * CLIENT_THREAD_COUNT);
+    bzero(thread_pool, sizeof(pthread_t) * CLIENT_THREAD_COUNT);
+
+    pthread_mutex_t thread_pool_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t worker_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+    queue_t* work_queue = NULL; //TODO: Free this too lol
+    sem_t worker_sem;
+    sem_init(&worker_sem, 0, CONCURRENT_WORK_COUNT);
+
+    client_cleanup_arg_t *cleanup_arg = malloc(sizeof(client_cleanup_arg_t));
+    cleanup_arg->newsockfd = newsockfd;
+    cleanup_arg->recv_str_len = recv_str_len;
+    cleanup_arg->recv_used_len = recv_used_len;
+    cleanup_arg->recieved_string = recieved_string;
+    cleanup_arg->flags = flags;
+    cleanup_arg->thread_avail_flags = thread_avail_flags;
+    cleanup_arg->client_id = client_id;
+    cleanup_arg->thread_pool = thread_pool;
+    cleanup_arg->client_pool_mutex = args->client_pool_mutex;
+
+    cleanup_arg->thread_arg = thread_arg;
+
+    pthread_cleanup_push(client_handler_cleanup, (void*)cleanup_arg);
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+
 #if DEBUG
     fprintf(stderr, "[ CLIENT %02d ] Thread Created for Client %d\n", client_id, client_id);
 #endif
-
-    // client thread init
-    char *thread_avail_flags = init_avail_flags(CLIENT_THREAD_COUNT);
-    pthread_t thread_pool[CLIENT_THREAD_COUNT];// = malloc(sizeof(pthread_t) * CLIENT_THREAD_COUNT);
-    bzero(thread_pool, sizeof(pthread_t) * CLIENT_THREAD_COUNT);
-    pthread_mutex_t thread_pool_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-    queue_t* work_queue = NULL;
-    pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
-    pthread_mutex_t worker_mutex = PTHREAD_MUTEX_INITIALIZER;
-    sem_t worker_sem;
-    sem_init(&worker_sem, 0, CONCURRENT_WORK_COUNT);
 
     while(1) {
         bzero(buffer, BUFFER_LEN);
@@ -189,33 +207,7 @@ void *client_handler(void *thread_arg) {
         }
     }
 
-    // clean up :)
-
-    close(*newsockfd);
-    free(newsockfd);
-
-#if DEBUG
-    fprintf(stderr, "[ CLIENT %02d ] Client thread cleaning up..\n", client_id);
-#endif
-
-    for(int i = 0; i < CLIENT_THREAD_COUNT; i++) {
-        if(thread_avail_flags[i] == 1) {
-            pthread_cancel(thread_pool[i]);
-            pthread_join(thread_pool[i], NULL);
-        }
-    }
-
-    free(recv_str_len);
-    free(recv_used_len);
-    free(*recieved_string);
-    free(recieved_string);
-
-#if DEBUG
-    fprintf(stderr, "[ CLIENT %02d ] Client thread dying\n", client_id);
-#endif
-    reset_flag(flags+client_id, args->client_pool_mutex);
-    free(args);
-
+    pthread_cleanup_pop(1);
     return 0;
 }
 
@@ -354,5 +346,47 @@ void slep_handler(worker_arg_t *arg) {
 
     to_send = "I just woke up!";
     send_formatted(newsockfd, "OKAY", to_send);
+}
+
+void client_handler_cleanup(void *client_cleanup_arg) {
+    client_cleanup_arg_t *arg = (client_cleanup_arg_t*) client_cleanup_arg;
+
+#if DEBUG
+    fprintf(stderr, "[ CLIENT %02d ] Client thread cleaning up..\n", client_id);
+#endif
+
+    char* thread_avail_flags = arg->thread_avail_flags;
+    pthread_t *thread_pool = arg->thread_pool;
+
+    for(int i = 0; i < CLIENT_THREAD_COUNT; i++) {
+        if(thread_avail_flags[i] == 1) {
+            pthread_cancel(thread_pool[i]);
+            pthread_join(thread_pool[i], NULL);
+        }
+    }
+
+    // clean up :)
+    close(*(arg->newsockfd));
+    free(arg->newsockfd);
+    free(arg->recv_str_len);
+    free(arg->recv_used_len);
+
+    if(arg->recieved_string)
+        free(*(arg->recieved_string));
+
+    free(arg->recieved_string);
+
+#if DEBUG
+    fprintf(stderr, "[ CLIENT %02d ] Client thread dying\n", client_id);
+#endif
+
+    // ensure to reset the flag!!
+    while(*(arg->flags + arg->client_id) == 1) {
+        reset_flag(arg->flags+arg->client_id, arg->client_pool_mutex);
+    }
+
+    free(arg->thread_pool);
+    free(arg->thread_arg);
+    free(arg);
 }
 

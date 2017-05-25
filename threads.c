@@ -18,6 +18,8 @@ char *init_avail_flags(int count) {
 int get_avail_thread(char* flags, int count, pthread_mutex_t* mutex) {
     int val = -1;
 
+    int oldstate = 0;
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
     pthread_mutex_lock(mutex);
     for(int i = 0; i < count; i++) {
         if(flags[i] == 0) {
@@ -27,13 +29,32 @@ int get_avail_thread(char* flags, int count, pthread_mutex_t* mutex) {
         }
     }
     pthread_mutex_unlock(mutex);
+    pthread_setcancelstate(oldstate, NULL);
 
     return val;
 }
 
+int count_avail_thread(char* flags, int count, pthread_mutex_t* mutex) {
+    int t = 0;
+
+    int oldstate = 0;
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
+    pthread_mutex_lock(mutex);
+    for(int i = 0; i < count; i++) {
+        if(flags[i] == 0) {
+            t++;
+        }
+    }
+    pthread_mutex_unlock(mutex);
+    pthread_setcancelstate(oldstate, NULL);
+
+    return t;
+}
 int check_avail_thread(char* flags, int count, pthread_mutex_t* mutex) {
     int val = -1;
 
+    int oldstate = 0;
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
     pthread_mutex_lock(mutex);
     for(int i = 0; i < count; i++) {
         if(flags[i] == 0) {
@@ -42,12 +63,16 @@ int check_avail_thread(char* flags, int count, pthread_mutex_t* mutex) {
         }
     }
     pthread_mutex_unlock(mutex);
+    pthread_setcancelstate(oldstate, NULL);
 
     return val;
 }
 
 void reset_flag(char* flag, pthread_mutex_t* mutex) {
+    int oldstate = 0;
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
     pthread_mutex_lock(mutex);
     *flag = 0;
     pthread_mutex_unlock(mutex);
+    pthread_setcancelstate(oldstate, NULL);
 }

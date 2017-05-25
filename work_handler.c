@@ -65,6 +65,7 @@ void work_handler_cleanup(void* cleanup_arg) {
 }
 
 void work_handler(worker_arg_t *arg) {
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
     int *cancelled = malloc(sizeof(int));
     int thread_id = arg->thread_id;
     int *newsockfd = arg->newsockfd;
@@ -89,6 +90,8 @@ void work_handler(worker_arg_t *arg) {
     cleanup_arg.sol_mutex = NULL;
 
     pthread_cleanup_push(work_handler_cleanup, (void*)&cleanup_arg);
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+    pthread_testcancel();
 
     uint32_t difficulty;
     uint64_t n;

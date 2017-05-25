@@ -39,6 +39,7 @@
  *    This does not happen <100 clients.
  *     > Before, sever queued pending clients.
  *     > Now server just disconnects them so this issue never occurs :)
+ *     > happened. FIXED
  *
  *  - SIGPIPE handling
  *     > ignore them >:)
@@ -90,7 +91,15 @@ int main(int argc, char **argv) {
 #if DEBUG
             perror("[ SERVER ] ERROR on accept");
 #endif
+            free(newsockfd);
+            free(cli_addr);
+            continue;
         }
+
+        fprintf(stderr, "[ SERVER ] Available client slots: %d\n", count_avail_thread(thread_avail_flags, CLIENT_COUNT, &client_pool_mutex));
+        fflush(stderr);
+#if DEBUG
+#endif
 
         // Wait for a thread to become available
         int i;
@@ -112,7 +121,7 @@ int main(int argc, char **argv) {
 
         // join the dead thread
         if(thread_pool[i]) {
-            pthread_cancel(thread_pool[i]);
+            //pthread_cancel(thread_pool[i]);
             pthread_join(thread_pool[i], NULL);
         }
 
@@ -142,6 +151,11 @@ int main(int argc, char **argv) {
 #if DEBUG
             perror("[ SERVER ] ERROR creating thread");
 #endif
+            close(*newsockfd);
+            free(thread_arg);
+            free(newsockfd);
+            free(cli_addr);
+            continue;
         }
 
 #if DEBUG

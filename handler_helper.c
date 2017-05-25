@@ -30,7 +30,8 @@ BYTE BYTE_TWO[] = {
 
 // aka pop head from queue
 void rm_tid(queue_t **queue, pthread_mutex_t *mutex) {
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+    int oldstate = 0;
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
     pthread_mutex_lock(mutex);
 
     if(*queue != NULL) {
@@ -40,12 +41,13 @@ void rm_tid(queue_t **queue, pthread_mutex_t *mutex) {
     }
 
     pthread_mutex_unlock(mutex);
-    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+    pthread_setcancelstate(oldstate, NULL);
 }
 
 // aka push tail to queue
 void push_tid(queue_t **queue, pthread_mutex_t *mutex, int tid) {
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+    int oldstate = 0;
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
     pthread_mutex_lock(mutex);
 
     queue_t *curr = *queue;
@@ -63,19 +65,20 @@ void push_tid(queue_t **queue, pthread_mutex_t *mutex, int tid) {
     }
 
     pthread_mutex_unlock(mutex);
-    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+    pthread_setcancelstate(oldstate, NULL);
 }
 
 // aka read head
 int get_tid(queue_t **queue, pthread_mutex_t *mutex) {
     int val = -1;
 
-    (void)*mutex; // lol
-
-    //pthread_mutex_lock(mutex);
+    int oldstate = 0;
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
+    pthread_mutex_lock(mutex);
     if(*queue != NULL)
         val = (*queue)->thread_id;
-    //pthread_mutex_unlock(mutex);
+    pthread_mutex_unlock(mutex);
+    pthread_setcancelstate(oldstate, NULL);
 
     return val;
 }
@@ -154,6 +157,7 @@ void join_client_command(char **str, char *command_str, int *str_len, int* used_
  * send formatted message to the client, according to specs
  */
 void send_formatted(int *newsockfd, char* info, char* msg) {
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
     char *to_send = malloc(sizeof(char) * 45);
 
     for(int i = 0; i < 45; i++)
@@ -176,12 +180,14 @@ void send_formatted(int *newsockfd, char* info, char* msg) {
     to_send[44] = '\n';
 
     send_message(newsockfd, to_send, 45);
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 }
 
 /**
  * send raw message to the client
  */
 void send_message(int *newsockfd, char* to_send, int len) {
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
     int n;
 
     char to_log[len];
@@ -194,6 +200,7 @@ void send_message(int *newsockfd, char* to_send, int len) {
         perror("[ SENDMSG ] ERROR writing to socket");
 #endif
     }
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 }
 
 /**

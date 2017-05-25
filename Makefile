@@ -8,7 +8,7 @@
 #   LastChange: 2017-05-23 04:53:39
 #=============================================================================
 CC = gcc
-CFLAGS = -Wall -Wextra -std=gnu99 -O3 #-g
+CFLAGS = -Wall -Wextra -std=gnu99 -O3 -g
 
 LIB = -lm -pthread
 HDR = driver.h netsock.h handler.h handler_helper.h threads.h sha256.h logger.h

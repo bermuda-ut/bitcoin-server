@@ -24,3 +24,4 @@ extern char *init_avail_flags(int len);
 extern int get_avail_thread(char* flags, int count, pthread_mutex_t* mutex);
 extern int check_avail_thread(char* flags, int count, pthread_mutex_t* mutex);
 extern void reset_flag(char* flag, pthread_mutex_t* mutex);
+extern int count_avail_thread(char* flags, int count, pthread_mutex_t* mutex);

@@ -78,11 +78,26 @@ typedef struct {
     sem_t *worker_sem;
 } cleanup_arg_t;
 
+typedef struct {
+    int *newsockfd;
+    int *recv_str_len;
+    int *recv_used_len;
+    char **recieved_string;
+    char *flags;
+    char *thread_avail_flags;
+    int client_id;
+    pthread_t *thread_pool;
+    pthread_mutex_t *client_pool_mutex;
+    
+    void *thread_arg;
+} client_cleanup_arg_t;
+
 extern void *client_handler(void *);
 
 void *work_btch(void *);
 void *handler_wrapper(void *);
 void work_handler_cleanup(void*);
+void client_handler_cleanup(void *);
 
 void work_handler(worker_arg_t *);
 void abrt_handler(worker_arg_t *);
