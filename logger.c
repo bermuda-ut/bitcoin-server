@@ -45,13 +45,17 @@ int init_logger(Sockaddr_in *svr_info) {
     // something went wrong
     if(_logger_file == 0) return 0;
 
-    print_welcome(stdout);
-    print_welcome(_logger_file);
+    pthread_t printers[2];
+    pthread_create(printers, NULL, print_welcome, (void*)stdout);
+    pthread_create(printers, NULL, print_welcome, (void*)_logger_file);
+    //print_welcome(stdout);
+    //print_welcome(_logger_file);
 
     return 1;
 }
 
-void print_welcome(FILE *file) {
+void *print_welcome(void *arg_file) {
+    FILE *file = (FILE*) arg_file;
     char* mode = "Submission";
     char* mode2 = "Logless STDOUT";
 #if DEBUG
@@ -61,18 +65,48 @@ void print_welcome(FILE *file) {
     mode2 = "Log STDOUT";
 #endif
 
-    fprintf(file, "\n\n%s\n\n", _coin_ascii);
+    int i = 0;
+
+    if(file != stdout) {
+    fprintf(file, "\n%s\n\n", _coin_ascii);
     fprintf(file, "%s\n\n", _svr_ascii);
-    fprintf(file, "--------------------------------------------------------\n\
+    fprintf(file, "---------------------------------------------------------\n\n\
  Author     : Max Lee, max@mirrorstairstudio.com\n\
  Server Mode: %s, %s\n\
- Date       : 25/MAY/17\n\n\
+ Date       : 26/MAY/17\n\
  Multithreaded Bitcoin Server based on CS Project 2\n\
  Written in blood and tears, not from this project </3\n\
  \n\
  mirrorstairstudio.com                  mallocsizeof.me\n\
---------------------------------------------------------\n", mode, mode2);
+--------------------------------------------------------\n", 
+mode, mode2);
+    }
+
+    while(file == stdout) {
+    fprintf(file, "%s\n\n", _coin_ascii);
+    fprintf(file, "%s\n\n", _svr_ascii);
+    fprintf(file, "                 Server alive for %03d s                 \n\
+--------------------------------------------------------\n\
+ Author     : Max Lee, max@mirrorstairstudio.com\n\
+ Server Mode: %s, %s\n\
+ Date       : 26/MAY/17\n\n\
+ Multithreaded Bitcoin Server based on CS Project 2\n\
+ Written in blood and tears, not from this project </3\n\
+ \n\
+ mirrorstairstudio.com                  mallocsizeof.me\n\
+--------------------------------------------------------\n\
+%03d/%03d Clients         %02d/%02d Works        %05d Served", 
+i, mode, mode2, 
+curr_cli_count, CLIENT_COUNT, 
+global_work_count, GLOBAL_WORK_LIMIT, 
+global_served_count);
     fflush(file);
+    sleep(1);
+    i++;
+    clear();
+    }
+
+    pthread_exit(NULL);
 }
 
 /*

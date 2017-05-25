@@ -48,6 +48,8 @@
  */
 
 int global_work_count = 0;
+int global_served_count = 0;
+int curr_cli_count = 0;
 pthread_mutex_t global_work_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 int main(int argc, char **argv) {
@@ -80,9 +82,6 @@ int main(int argc, char **argv) {
 	listen(sockfd, CLIENT_COUNT);
 
     char warned = 0;
-#if DEBUG
-    int count = 0;
-#endif
     while(1) {
         Sockaddr_in *cli_addr = malloc(sizeof(Sockaddr_in));
         socklen_t clilen = sizeof(*cli_addr);
@@ -163,10 +162,13 @@ int main(int argc, char **argv) {
             free(newsockfd);
             free(cli_addr);
             continue;
+        } else {
+            curr_cli_count++;
+            global_served_count++;
         }
 
 #if DEBUG
-        fprintf(stderr, "[ SERVER ] Served %d clients\n", ++count);
+        fprintf(stderr, "[ SERVER ] Served %d clients\n", global_served_count);
 #endif
     }
 	

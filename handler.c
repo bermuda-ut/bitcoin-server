@@ -404,6 +404,7 @@ void client_handler_cleanup(void *client_cleanup_arg) {
     while(*(arg->flags + arg->client_id) == 1) {
         reset_flag(arg->flags+arg->client_id, arg->client_pool_mutex);
     }
+    curr_cli_count--;
 
     free(arg->thread_pool);
     free(arg->thread_arg);

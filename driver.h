@@ -32,4 +32,8 @@ void sigabrt_handler(int);
 extern int global_work_count;
 extern pthread_mutex_t global_work_mutex;
 
+// for logger purpose
+extern int curr_cli_count;
+extern int global_served_count;
+
 #endif
