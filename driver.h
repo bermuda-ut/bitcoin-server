@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <pthread.h>
 
 #define DEBUG 0
 #define LOG_OUTPUT 0
@@ -28,5 +29,6 @@ void segfault_handler(int);
 // and probably a good idea to not overload the server.. :)
 #define GLOBAL_WORK_LIMIT 10
 extern int global_work_count;
+extern pthread_mutex_t global_work_mutex;
 
 #endif

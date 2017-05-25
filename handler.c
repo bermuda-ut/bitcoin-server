@@ -174,6 +174,10 @@ void *client_handler(void *thread_arg) {
                 wrapper_arg->worker_func = abrt_handler;
 
             } else if(strcmp("WORK", cmd) == 0 && orig_len == 98) {
+				int old = 0;
+				pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &old);
+				pthread_mutex_lock(&global_work_mutex);
+
                 if(global_work_count < GLOBAL_WORK_LIMIT) {
                     global_work_count++;
                     wrapper_arg->worker_func = work_handler;
@@ -185,6 +189,8 @@ void *client_handler(void *thread_arg) {
                     wrapper_arg->worker_func = cust_handler;
                 }
                 //print_queue(work_queue);
+				pthread_mutex_unlock(&global_work_mutex);
+				pthread_setcancelstate(old, NULL);
 
             } else {
                 wrapper_arg->worker_func = unkn_handler;
@@ -362,7 +368,6 @@ void slep_handler(worker_arg_t *arg) {
 }
 
 void client_handler_cleanup(void *client_cleanup_arg) {
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
     client_cleanup_arg_t *arg = (client_cleanup_arg_t*) client_cleanup_arg;
 
 #if DEBUG
@@ -403,6 +408,4 @@ void client_handler_cleanup(void *client_cleanup_arg) {
     free(arg->thread_pool);
     free(arg->thread_arg);
     free(client_cleanup_arg);
-    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 }
-

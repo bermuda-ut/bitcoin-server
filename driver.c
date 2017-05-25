@@ -48,6 +48,8 @@
  */
 
 int global_work_count = 0;
+pthread_mutex_t global_work_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 int main(int argc, char **argv) {
 	int sockfd, portno;
 	Sockaddr_in serv_addr;
