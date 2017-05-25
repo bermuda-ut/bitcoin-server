@@ -378,11 +378,8 @@ void client_handler_cleanup(void *client_cleanup_arg) {
             pthread_join(thread_pool[i], NULL);
         }
     }
-    /*
-    */
-    free(thread_pool);
-    free(thread_avail_flags);
 
+    free(thread_avail_flags);
     // clean up :)
     close(*(arg->newsockfd));
     free(arg->newsockfd);
@@ -405,7 +402,7 @@ void client_handler_cleanup(void *client_cleanup_arg) {
 
     free(arg->thread_pool);
     free(arg->thread_arg);
-    free(arg);
+    free(client_cleanup_arg);
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 }
 
