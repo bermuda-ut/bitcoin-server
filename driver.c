@@ -61,6 +61,7 @@ int main(int argc, char **argv) {
 
     // custom signal handlers
     signal(SIGSEGV, segfault_handler);
+    signal(SIGABRT, sigabrt_handler);
     signal(SIGPIPE, SIG_IGN);
 
     // open socket
@@ -174,6 +175,12 @@ int main(int argc, char **argv) {
     close_logger();
 
 	return 0; 
+}
+
+void sigabrt_handler(int signum) {
+   fprintf(stdout, "I am Sorry (%d)\nServer is incomplete and memory leaks pretty hard..\nmalloc failed..", signum);
+   fflush(stdout);
+   exit(EXIT_FAILURE);
 }
 
 void segfault_handler(int signum) {

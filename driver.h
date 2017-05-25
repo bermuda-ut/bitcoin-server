@@ -24,6 +24,7 @@
 #define BUFFER_LEN 256
 
 void segfault_handler(int);
+void sigabrt_handler(int);
 
 // to meet the spec
 // and probably a good idea to not overload the server.. :)
