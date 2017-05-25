@@ -5,7 +5,7 @@
 #        Email: hoso1312@gmail.com
 #     HomePage: mallocsizeof.me
 #      Version: 0.0.1
-#   LastChange: 2017-05-24 18:15:18
+#   LastChange: 2017-05-25 22:10:28
 =============================================================================*/
 #include "driver.h"
 #include "netsock.h"
@@ -28,6 +28,8 @@
  *    Have a logger thread which will not die until it finishes logging
  *    Need to catch signal SIGTERM and SIGINT, kill all other threads,
  *    wait for logger threads, then exit()
+ *
+ *  - Find and free all memory leaks :P
  *
  *
  * DONE:
@@ -96,9 +98,9 @@ int main(int argc, char **argv) {
             continue;
         }
 
+#if DEBUG
         fprintf(stderr, "[ SERVER ] Available client slots: %d\n", count_avail_thread(thread_avail_flags, CLIENT_COUNT, &client_pool_mutex));
         fflush(stderr);
-#if DEBUG
 #endif
 
         // Wait for a thread to become available
