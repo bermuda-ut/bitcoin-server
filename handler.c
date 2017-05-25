@@ -18,6 +18,7 @@
  */
 void *client_handler(void *thread_arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+    //pthread_detach(pthread_self());
     // init
     thread_arg_t *args = (thread_arg_t*) thread_arg;
 
@@ -92,7 +93,7 @@ void *client_handler(void *thread_arg) {
             join_client_command(recieved_string, buffer, recv_str_len, recv_used_len);
         }
 
-        if(check_avail_thread(thread_avail_flags, CLIENT_COUNT, &thread_pool_mutex) == 0) {
+        if(check_avail_thread(thread_avail_flags, CLIENT_THREAD_COUNT, &thread_pool_mutex) == 0) {
 #if DEBUG
             fprintf(stderr, "[ CLIENT %02d ] Client has reached maximum thread limit. Not parsing commands until a thread becomes available.\n", client_id);
 #endif
@@ -106,14 +107,14 @@ void *client_handler(void *thread_arg) {
             logger_log(args->addr, *newsockfd, cmd, orig_len);
 
 
-            while((thread_id = get_avail_thread(thread_avail_flags, CLIENT_COUNT, &thread_pool_mutex)) == -1) {
+            while((thread_id = get_avail_thread(thread_avail_flags, CLIENT_THREAD_COUNT, &thread_pool_mutex)) == -1) {
 #if DEBUG
             fprintf(stderr, "[ CLIENT %02d ] Client has reached maximum thread limit. Not parsing commands until a thread becomes available.\n", client_id);
 #endif
                 sleep(1);
             };
 
-            // join the dead thread
+            // wait for the pool thread
             if(thread_pool[thread_id]) {
                 pthread_cancel(thread_pool[thread_id]);
                 pthread_join(thread_pool[thread_id], NULL);
@@ -216,17 +217,21 @@ void *client_handler(void *thread_arg) {
  * cleanups
  */
 void *handler_wrapper(void *wrapper_arg) {
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
     //pthread_detach(pthread_self());
     wrapper_arg_t *arg = (wrapper_arg_t*) wrapper_arg;
     char *flag = arg->flag;
 
     arg->worker_func(arg->worker_arg);
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
     free(arg->worker_arg->command_str);
     free(arg->worker_arg);
     free(arg);
 
     reset_flag(flag, arg->thread_pool_mutex);
+
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     return 0;
 }
 
@@ -234,6 +239,7 @@ void *handler_wrapper(void *wrapper_arg) {
  * Kill all worker threads
  */
 void abrt_handler(worker_arg_t *arg) {
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     queue_t **tid_queue = arg->work_queue;
     pthread_t *thread_pool = arg->thread_pool;
     //char *pool_flag = arg->pool_flag;
@@ -250,13 +256,13 @@ void abrt_handler(worker_arg_t *arg) {
         curr = curr->next;
         count++;
     }
-    pthread_mutex_unlock(arg->worker_mutex);
 }
 
 /**
  * Check if valid solution
  */
 void soln_handler(worker_arg_t *arg) {
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     int *newsockfd = arg->newsockfd;
     char *command_str = arg->command_str;
 
@@ -291,6 +297,7 @@ void soln_handler(worker_arg_t *arg) {
  */
 
 void unkn_handler(worker_arg_t *arg) {
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 #if DEBUG
     fprintf(stderr, "[ THREAD ] Unknown command from %02d. Recieved: %s\n", arg->client_id, arg->command_str);
 #endif
@@ -298,6 +305,7 @@ void unkn_handler(worker_arg_t *arg) {
 }
 
 void erro_handler(worker_arg_t *arg) {
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 #if DEBUG
     fprintf(stderr, "[ THREAD ] Handling ERRO for %02d\n", arg->client_id);
 #endif
@@ -305,6 +313,7 @@ void erro_handler(worker_arg_t *arg) {
 }
 
 void okay_handler(worker_arg_t *arg) {
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 #if DEBUG
     fprintf(stderr, "[ THREAD ] Handling OKAY for %02d\n", arg->client_id);
 #endif
@@ -312,6 +321,7 @@ void okay_handler(worker_arg_t *arg) {
 }
 
 void pong_handler(worker_arg_t *arg) {
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 #if DEBUG
     fprintf(stderr, "[ THREAD ] Handling PONG for %02d\n", arg->client_id);
 #endif
@@ -319,6 +329,7 @@ void pong_handler(worker_arg_t *arg) {
 }
 
 void ping_handler(worker_arg_t *arg) {
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 #if DEBUG
     fprintf(stderr, "[ THREAD ] Handling PING for %02d\n", arg->client_id);
 #endif
@@ -326,6 +337,7 @@ void ping_handler(worker_arg_t *arg) {
 }
 
 void cust_handler(worker_arg_t *arg) {
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 #if DEBUG
     fprintf(stderr, "[ THREAD ] Handling custom message for %02d\n", arg->client_id);
 #endif
@@ -333,6 +345,7 @@ void cust_handler(worker_arg_t *arg) {
 }
 
 void slep_handler(worker_arg_t *arg) {
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     int *newsockfd = arg->newsockfd;
 
 #if DEBUG
@@ -349,6 +362,7 @@ void slep_handler(worker_arg_t *arg) {
 }
 
 void client_handler_cleanup(void *client_cleanup_arg) {
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
     client_cleanup_arg_t *arg = (client_cleanup_arg_t*) client_cleanup_arg;
 
 #if DEBUG
@@ -364,6 +378,10 @@ void client_handler_cleanup(void *client_cleanup_arg) {
             pthread_join(thread_pool[i], NULL);
         }
     }
+    /*
+    */
+    free(thread_pool);
+    free(thread_avail_flags);
 
     // clean up :)
     close(*(arg->newsockfd));
@@ -388,5 +406,6 @@ void client_handler_cleanup(void *client_cleanup_arg) {
     free(arg->thread_pool);
     free(arg->thread_arg);
     free(arg);
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 }
 

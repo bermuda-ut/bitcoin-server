@@ -126,6 +126,8 @@ int main(int argc, char **argv) {
             //pthread_cancel(thread_pool[i]);
             pthread_join(thread_pool[i], NULL);
         }
+        /*
+        */
 
         // reset flag
         if(warned) {

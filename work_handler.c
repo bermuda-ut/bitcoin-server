@@ -110,11 +110,11 @@ void work_handler(worker_arg_t *arg) {
     cleanup_arg.sol_mutex = sol_mutex;
 
     pthread_t *btches = malloc(sizeof(pthread_t) * thread_count);
+    bzero(btches, sizeof(pthread_t) * thread_count);
     btch_arg_t *btch_args = malloc(sizeof(btch_arg_t) * thread_count);
     cleanup_arg.btches = &btches;
     cleanup_arg.btch_args = btch_args;
     cleanup_arg.thread_count = thread_count;
-    bzero(btches, sizeof(pthread_t) * thread_count);
 
 #if DEBUG
     fprintf(stderr, "[ WORKMAN ] Worker %d waiting for %s\n", thread_id, command_str);
@@ -174,8 +174,8 @@ void work_handler(worker_arg_t *arg) {
         sleep(1);
     }
 
-    pthread_mutex_lock(arg->worker_mutex);
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+    pthread_mutex_lock(arg->worker_mutex);
 
     char* result = malloc(sizeof(char) * 98);
     char print_seed[65];
@@ -188,8 +188,8 @@ void work_handler(worker_arg_t *arg) {
 #endif
     send_message(newsockfd, result, 97);
 
-    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     pthread_mutex_unlock(arg->worker_mutex);
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 
 #if DEBUG
     fprintf(stderr, "[ WORKMAN ] Worker %d cleaning up\n", thread_id);

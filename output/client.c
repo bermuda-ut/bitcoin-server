@@ -115,6 +115,7 @@ int main(int argc, char**argv)
         }
     }
 	
+    /*
     for(int i = 0; i < 100; i++) {
         bzero(buffer,9999);
         n = read(sockfd,buffer,9999);
@@ -124,6 +125,7 @@ int main(int argc, char**argv)
         }
         printf("%s",buffer);
     }
+    */
 
 	return 0;
 }

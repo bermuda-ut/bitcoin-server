@@ -3,22 +3,22 @@
 while true
 do
     echo "Testing.."
-    ./a localhost "$1" > /dev/null &
+    ./a "$1" "$2" > /dev/null &
     pidA=`echo $!`
 
-    ./b localhost "$1" > /dev/null &
+    ./b "$1" $2 > /dev/null &
     pidB=`echo $!`
 
-    ./c localhost "$1" > /dev/null &
+    ./c "$1" $2 > /dev/null &
     pidC=`echo $!`
 
-    ./d localhost "$1" > /dev/null &
+    ./d "$1" $2 > /dev/null &
     pidD=`echo $!`
 
-    ./efgh localhost "$1" > /dev/null &
+    ./efgh "$1" $2 > /dev/null &
     pidE=`echo $!`
 
-    ./i localhost "$1" > /dev/null &
+    ./i "$1" $2 > /dev/null &
     pidI=`echo $!`
 
     #./jk localhost "$1" > /dev/null &

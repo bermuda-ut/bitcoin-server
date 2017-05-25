@@ -23,7 +23,7 @@ const char* _coin_ascii = "                     ______________\n\
         __,.,---'''''              '''''---..._\n\
      ,-'             ,:::::,,:::::,           '`-.\n\
     |             ''::     ::     ::''           |\n\
-    |            '':::.....::....,:::''           |\n\
+    |            '':::.....::.....:::''           |\n\
     |'-.._        ````````````````````       __,,-|\n\
      '-.._''`---.....______________.....---''__,,-\n\
           ''`---.....______________.....---''";
@@ -66,7 +66,7 @@ void print_welcome(FILE *file) {
     fprintf(file, "--------------------------------------------------------\n\
  Author     : Max Lee, max@mirrorstairstudio.com\n\
  Server Mode: %s, %s\n\
- Date       : 24/MAY/17\n\n\
+ Date       : 25/MAY/17\n\n\
  Multithreaded Bitcoin Server based on CS Project 2\n\
  Written in blood and tears, not from this project </3\n\
  \n\
