@@ -55,6 +55,7 @@ int init_logger(Sockaddr_in *svr_info) {
 }
 
 void *print_welcome(void *arg_file) {
+    pthread_detach(pthread_self());
     FILE *file = (FILE*) arg_file;
     char* mode = "Submission";
     char* mode2 = "Logless STDOUT";
@@ -67,22 +68,21 @@ void *print_welcome(void *arg_file) {
 
     int i = 0;
 
-    if(file != stdout) {
     fprintf(file, "\n%s\n\n", _coin_ascii);
     fprintf(file, "%s\n\n", _svr_ascii);
-    fprintf(file, "---------------------------------------------------------\n\n\
+    fprintf(file, "--------------------------------------------------------\n\
  Author     : Max Lee, max@mirrorstairstudio.com\n\
  Server Mode: %s, %s\n\
- Date       : 26/MAY/17\n\
+ Date       : 26/MAY/17\n\n\
  Multithreaded Bitcoin Server based on CS Project 2\n\
  Written in blood and tears, not from this project </3\n\
  \n\
  mirrorstairstudio.com                  mallocsizeof.me\n\
 --------------------------------------------------------\n", 
 mode, mode2);
-    }
+    fflush(file);
 
-    while(file == stdout) {
+    while(ANIMATED && file == stdout) {
     fprintf(file, "%s\n\n", _coin_ascii);
     fprintf(file, "%s\n\n", _svr_ascii);
     fprintf(file, "                 Server alive for %03d s                 \n\
@@ -106,7 +106,8 @@ global_served_count);
     clear();
     }
 
-    pthread_exit(NULL);
+    return 0;
+    //pthread_exit(NULL);
 }
 
 /*
