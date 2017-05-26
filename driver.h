@@ -24,7 +24,7 @@
 #define BUFFER_LEN 256
 
 // animated stdout, disabled for submission
-#define ANIMATED 1
+#define ANIMATED 0
 
 void segfault_handler(int);
 void sigabrt_handler(int);

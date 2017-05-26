@@ -45,17 +45,21 @@ int init_logger(Sockaddr_in *svr_info) {
     // something went wrong
     if(_logger_file == 0) return 0;
 
+#if ANIMATED
     pthread_t printers[2];
     pthread_create(printers, NULL, print_welcome, (void*)stdout);
     pthread_create(printers, NULL, print_welcome, (void*)_logger_file);
-    //print_welcome(stdout);
-    //print_welcome(_logger_file);
-
+#else
+    print_welcome(stdout);
+    print_welcome(_logger_file);
+#endif
     return 1;
 }
 
 void *print_welcome(void *arg_file) {
+#if ANIMATED
     pthread_detach(pthread_self());
+#endif
     FILE *file = (FILE*) arg_file;
     char* mode = "Submission";
     char* mode2 = "Logless STDOUT";

@@ -404,7 +404,9 @@ void client_handler_cleanup(void *client_cleanup_arg) {
     while(*(arg->flags + arg->client_id) == 1) {
         reset_flag(arg->flags+arg->client_id, arg->client_pool_mutex);
     }
+#if ANIMATED
     curr_cli_count--;
+#endif
 
     free(arg->thread_pool);
     free(arg->thread_arg);

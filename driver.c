@@ -45,6 +45,8 @@
  *
  *  - SIGPIPE handling
  *     > ignore them >:)
+ *
+ *  - Animated stdout
  */
 
 int global_work_count = 0;
@@ -162,9 +164,11 @@ int main(int argc, char **argv) {
             free(newsockfd);
             free(cli_addr);
             continue;
+#if ANIMATED
         } else {
             curr_cli_count++;
             global_served_count++;
+#endif
         }
 
 #if DEBUG
