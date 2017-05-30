@@ -89,7 +89,7 @@ mode, mode2);
     while(ANIMATED && file == stdout) {
     fprintf(file, "%s\n\n", _coin_ascii);
     fprintf(file, "%s\n\n", _svr_ascii);
-    fprintf(file, "                 Server alive for %03d s                 \n\
+    fprintf(file, "                 Server alive for %03d s\n\
 --------------------------------------------------------\n\
  Author     : Max Lee, max@mirrorstairstudio.com\n\
  Server Mode: %s, %s\n\
@@ -99,7 +99,7 @@ mode, mode2);
  \n\
  mirrorstairstudio.com                  mallocsizeof.me\n\
 --------------------------------------------------------\n\
-%03d/%03d Clients         %02d/%02d Works        %05d Served", 
+%03d/%03d Clients       %02d/%02d Works          %05d Served", 
 i, mode, mode2, 
 curr_cli_count, CLIENT_COUNT, 
 global_work_count, GLOBAL_WORK_LIMIT, 
